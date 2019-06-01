@@ -27,8 +27,11 @@ SOFTWARE.
 package depslib
 
 import (
+	"fmt"
 	"path"
 	"strings"
+
+	"github.com/blang/semver"
 
 	"github.com/piot/log-go/src/clog"
 )
@@ -43,7 +46,7 @@ func HackRemoveCShortName(shortname string) string {
 func copyDependency(rootPath string, depsPath string, repoName string, log *clog.Log) error {
 	shortName := RepoNameToShortName(repoName)
 	includeShortName := HackRemoveCShortName(shortName)
-	packageDir := path.Join(rootPath, "../", shortName+"/")
+	packageDir := path.Join(rootPath, shortName+"/")
 	targetName := path.Join(depsPath, shortName)
 	log.Debug("installing", clog.String("packageName", repoName), clog.String("shortName", shortName), clog.String("target", targetName))
 	makeErr := MakeRelativeSymlink(packageDir, targetName, log)
@@ -56,27 +59,131 @@ func copyDependency(rootPath string, depsPath string, repoName string, log *clog
 	return includeErr
 }
 
+func readConfigFromLocalPackageName(rootPath string, packageName string, log *clog.Log) (*Config, error) {
+	directoryName := RepoNameToShortName(packageName)
+	packageDirectory := path.Join(rootPath, directoryName)
+	return ReadConfigFromDirectory(packageDirectory)
+}
+
+type DependencyNode struct {
+	name            string
+	version         semver.Version
+	dependencies    []*DependencyNode
+	development     []*DependencyNode
+	dependingOnThis []*DependencyNode
+}
+
+func (n *DependencyNode) AddDependingOnThis(node *DependencyNode) {
+	n.dependingOnThis = append(n.dependingOnThis, node)
+}
+
+func (n *DependencyNode) AddDependency(node *DependencyNode) {
+	n.dependencies = append(n.dependencies, node)
+	node.AddDependingOnThis(n)
+}
+
+func (n *DependencyNode) AddDevelopment(node *DependencyNode) {
+	n.development = append(n.development, node)
+}
+
+func (n *DependencyNode) String() string {
+	return fmt.Sprintf("node %v %v", n.name, n.version)
+}
+
+func (n *DependencyNode) Print(indent int) {
+	indentString := strings.Repeat("..", indent)
+	fmt.Printf("%s %v\n", indentString, n)
+
+	for _, depNode := range n.dependencies {
+		depNode.Print(indent + 1)
+	}
+}
+
+func install(rootPath string, packageRootPath string, nodes map[string]*DependencyNode, log *clog.Log) error {
+	depsPath := path.Join(packageRootPath, "deps/")
+	for _, dep := range nodes {
+		copyErr := copyDependency(rootPath, depsPath, dep.name, log)
+		if copyErr != nil {
+			return copyErr
+		}
+	}
+	return nil
+}
+
+type Cache struct {
+	nodes map[string]*DependencyNode
+}
+
+func NewCache() *Cache {
+	return &Cache{nodes: make(map[string]*DependencyNode)}
+}
+
+func (c *Cache) FindNode(name string) *DependencyNode {
+	return c.nodes[name]
+}
+func (c *Cache) AddNode(name string, node *DependencyNode) {
+	c.nodes[name] = node
+}
+
+func handleNode(rootPath string, node *DependencyNode, cache *Cache, depName string, log *clog.Log) (*DependencyNode, error) {
+	foundNode := cache.FindNode(depName)
+	if foundNode == nil {
+		log.Info("didnt find it, need to read", clog.String("depName", depName))
+		depConf, confErr := readConfigFromLocalPackageName(rootPath, depName, log)
+		if confErr != nil {
+			return nil, confErr
+		}
+		var convertErr error
+		foundNode, convertErr = convertFromConfigNode(rootPath, depConf, cache, log)
+		if convertErr != nil {
+			return nil, convertErr
+		}
+	}
+	return foundNode, nil
+}
+
+func convertFromConfigNode(rootPath string, conf *Config, cache *Cache, log *clog.Log) (*DependencyNode, error) {
+	node := &DependencyNode{name: conf.Name, version: semver.MustParse(conf.Version)}
+	cache.AddNode(conf.Name, node)
+	for _, dep := range conf.Dependencies {
+		foundNode, handleErr := handleNode(rootPath, node, cache, dep.Name, log)
+		if handleErr != nil {
+			return nil, handleErr
+		}
+		node.AddDependency(foundNode)
+	}
+	const useDevelopmentDependencies = true
+	if useDevelopmentDependencies {
+		for _, dep := range conf.Development {
+			_, handleErr := handleNode(rootPath, node, cache, dep.Name, log)
+			if handleErr != nil {
+				return nil, handleErr
+			}
+			//node.AddDevelopment(foundNode)
+		}
+	}
+
+	return node, nil
+}
+
+func calculateTotalDependencies(rootPath string, conf *Config, log *clog.Log) (*Cache, *DependencyNode, error) {
+	cache := NewCache()
+	rootNode, rootNodeErr := convertFromConfigNode(rootPath, conf, cache, log)
+	return cache, rootNode, rootNodeErr
+}
+
 func SetupDependencies(filename string, log *clog.Log) error {
 	conf, confErr := ReadConfigFromFilename(filename)
 	if confErr != nil {
 		return confErr
 	}
-	rootPath := path.Dir(filename)
-	depsPath := path.Join(rootPath, "deps/")
-	for _, dep := range conf.Dependencies {
-		copyErr := copyDependency(rootPath, depsPath, dep.Name, log)
-		if copyErr != nil {
-			return copyErr
-		}
+	packageRootPath := path.Dir(filename)
+	rootPath := path.Dir(packageRootPath)
+	fmt.Printf("roootpath:%v\n", rootPath)
+	cache, rootNode, rootNodeErr := calculateTotalDependencies(rootPath, conf, log)
+	if rootNodeErr != nil {
+		return rootNodeErr
 	}
-	const useDevelopmentDependencies = true
-	if useDevelopmentDependencies {
-		for _, dep := range conf.Development {
-			copyErr := copyDependency(rootPath, depsPath, dep.Name, log)
-			if copyErr != nil {
-				return copyErr
-			}
-		}
-	}
-	return nil
+	rootNode.Print(0)
+	return install(rootPath, packageRootPath, cache.nodes, log)
 }
