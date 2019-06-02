@@ -55,8 +55,11 @@ type Config struct {
 }
 
 func RepoNameToShortName(repo string) string {
-	projectName := strings.Split(repo, "/")[1]
-	return projectName
+	projectNames := strings.Split(repo, "/")
+	if len(projectNames) != 2 {
+		panic("wrong project name:" + repo)
+	}
+	return projectNames[1]
 }
 
 func ReadFromReader(reader io.Reader) (*Config, error) {

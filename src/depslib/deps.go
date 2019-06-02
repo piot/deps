@@ -62,7 +62,11 @@ func copyDependency(rootPath string, depsPath string, repoName string, log *clog
 func readConfigFromLocalPackageName(rootPath string, packageName string, log *clog.Log) (*Config, error) {
 	directoryName := RepoNameToShortName(packageName)
 	packageDirectory := path.Join(rootPath, directoryName)
-	return ReadConfigFromDirectory(packageDirectory)
+	conf, confErr := ReadConfigFromDirectory(packageDirectory)
+	if conf.Name != packageName {
+		return nil, fmt.Errorf("name mismatch %v vs %v", conf.Name, packageName)
+	}
+	return conf, confErr
 }
 
 type DependencyNode struct {
