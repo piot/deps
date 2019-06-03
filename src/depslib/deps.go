@@ -28,6 +28,9 @@ package depslib
 
 import (
 	"fmt"
+	"io"
+	"net/url"
+	"os"
 	"path"
 	"strings"
 
@@ -43,9 +46,16 @@ func HackRemoveCShortName(shortname string) string {
 	return shortname
 }
 
-func copyDependency(rootPath string, depsPath string, repoName string, log *clog.Log) error {
-	shortName := RepoNameToShortName(repoName)
+func symlinkSrcInclude(packageDir string, depsPath string, shortName string, log *clog.Log) error {
 	includeShortName := HackRemoveCShortName(shortName)
+	sourceInclude := path.Join(packageDir, "src", "include", includeShortName)
+	targetInclude := path.Join(depsPath, "include", includeShortName)
+	includeErr := MakeRelativeSymlink(sourceInclude, targetInclude, log)
+	return includeErr
+}
+
+func symlinkRepo(rootPath string, depsPath string, repoName string, log *clog.Log) error {
+	shortName := RepoNameToShortName(repoName)
 	packageDir := path.Join(rootPath, shortName+"/")
 	targetName := path.Join(depsPath, shortName)
 	log.Debug("installing", clog.String("packageName", repoName), clog.String("shortName", shortName), clog.String("target", targetName))
@@ -53,10 +63,45 @@ func copyDependency(rootPath string, depsPath string, repoName string, log *clog
 	if makeErr != nil {
 		return makeErr
 	}
-	sourceInclude := path.Join(packageDir, "src", "include", includeShortName)
-	targetInclude := path.Join(depsPath, "include", includeShortName)
-	includeErr := MakeRelativeSymlink(sourceInclude, targetInclude, log)
-	return includeErr
+	return symlinkSrcInclude(packageDir, depsPath, shortName, log)
+}
+
+func wgetRepo(rootPath string, depsPath string, repoName string, log *clog.Log) error {
+	downloadURLString := fmt.Sprintf("https://github.com/%v/archive/master.zip", repoName)
+	downloadURL, parseErr := url.Parse(downloadURLString)
+	if parseErr != nil {
+		return parseErr
+	}
+	contentReader, downloadErr := HTTPGet(downloadURL, log)
+	if downloadErr != nil {
+		return downloadErr
+	}
+	targetFile, createErr := os.Create("temp.zip")
+	if createErr != nil {
+		return createErr
+	}
+	_, copyErr := io.Copy(targetFile, contentReader)
+	if copyErr != nil {
+		return copyErr
+	}
+	contentReader.(io.Closer).Close()
+	targetFile.Close()
+	shortName := RepoNameToShortName(repoName)
+	targetDirectory := path.Join(depsPath, shortName)
+	zipPrefix := fmt.Sprintf("%v-master/", shortName)
+	unzipErr := unzipFile("temp.zip", targetDirectory, zipPrefix, log)
+	if unzipErr != nil {
+		return unzipErr
+	}
+	return symlinkSrcInclude(targetDirectory, depsPath, shortName, log)
+}
+
+func copyDependency(rootPath string, depsPath string, repoName string, log *clog.Log) error {
+	if false {
+		return symlinkRepo(rootPath, depsPath, repoName, log)
+	}
+
+	return wgetRepo(rootPath, depsPath, repoName, log)
 }
 
 func readConfigFromLocalPackageName(rootPath string, packageName string, log *clog.Log) (*Config, error) {
