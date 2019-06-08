@@ -96,8 +96,8 @@ func wgetRepo(rootPath string, depsPath string, repoName string, log *clog.Log) 
 	return symlinkSrcInclude(targetDirectory, depsPath, shortName, log)
 }
 
-func copyDependency(rootPath string, depsPath string, repoName string, log *clog.Log) error {
-	if false {
+func copyDependency(rootPath string, depsPath string, repoName string, useSymlink bool, log *clog.Log) error {
+	if useSymlink {
 		return symlinkRepo(rootPath, depsPath, repoName, log)
 	}
 
@@ -148,11 +148,14 @@ func (n *DependencyNode) Print(indent int) {
 	}
 }
 
-func install(rootPath string, packageRootPath string, nodes map[string]*DependencyNode, log *clog.Log) error {
+func install(rootPath string, packageRootPath string, nodes map[string]*DependencyNode, useSymlink bool, log *clog.Log) error {
 	depsPath := path.Join(packageRootPath, "deps/")
-	CleanDirectoryWithBackup(depsPath, "deps.clean", log)
+	_, cleanErr := CleanDirectoryWithBackup(depsPath, "deps.clean", log)
+	if cleanErr != nil {
+		return cleanErr
+	}
 	for _, dep := range nodes {
-		copyErr := copyDependency(rootPath, depsPath, dep.name, log)
+		copyErr := copyDependency(rootPath, depsPath, dep.name, useSymlink, log)
 		if copyErr != nil {
 			return copyErr
 		}
@@ -222,7 +225,7 @@ func calculateTotalDependencies(rootPath string, conf *Config, log *clog.Log) (*
 	return cache, rootNode, rootNodeErr
 }
 
-func SetupDependencies(filename string, log *clog.Log) error {
+func SetupDependencies(filename string, useSymlink bool, log *clog.Log) error {
 	conf, confErr := ReadConfigFromFilename(filename)
 	if confErr != nil {
 		return confErr
@@ -235,5 +238,5 @@ func SetupDependencies(filename string, log *clog.Log) error {
 		return rootNodeErr
 	}
 	rootNode.Print(0)
-	return install(rootPath, packageRootPath, cache.nodes, log)
+	return install(rootPath, packageRootPath, cache.nodes, useSymlink, log)
 }

@@ -27,16 +27,20 @@ SOFTWARE.
 package main
 
 import (
+	"flag"
+
 	"github.com/piot/deps/src/depslib"
 	"github.com/piot/log-go/src/clog"
 )
 
 func run(log *clog.Log) error {
+	useSymlink := flag.Bool("l", false, "use local symlink instead of download")
+	flag.Parse()
 	foundConf, foundErr := depslib.FindClosestConfigurationFile(".")
 	if foundErr != nil {
 		return foundErr
 	}
-	err := depslib.SetupDependencies(foundConf, log)
+	err := depslib.SetupDependencies(foundConf, *useSymlink, log)
 	return err
 }
 
