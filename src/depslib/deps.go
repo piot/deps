@@ -150,10 +150,14 @@ func (n *DependencyNode) Print(indent int) {
 
 func install(rootPath string, packageRootPath string, nodes map[string]*DependencyNode, useSymlink bool, log *clog.Log) error {
 	depsPath := path.Join(packageRootPath, "deps/")
-	_, cleanErr := CleanDirectoryWithBackup(depsPath, "deps.clean", log)
-	if cleanErr != nil {
-		return cleanErr
+	_, statErr := os.Stat(depsPath)
+	if statErr == nil {
+		_, cleanErr := CleanDirectoryWithBackup(depsPath, "deps.clean", log)
+		if cleanErr != nil {
+			return cleanErr
+		}
 	}
+
 	for _, dep := range nodes {
 		copyErr := copyDependency(rootPath, depsPath, dep.name, useSymlink, log)
 		if copyErr != nil {
