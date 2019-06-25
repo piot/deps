@@ -70,6 +70,9 @@ func ReadFromReader(reader io.Reader) (*Config, error) {
 	fmt.Printf("version:%v\n", string(tomlString))
 	config := &Config{}
 	unmarshalErr := toml.Unmarshal(tomlString, config)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
 	if config.DepsVersion != "0.0.0" {
 		return nil, fmt.Errorf("wrong deps file format version '%v'", config.DepsVersion)
 	}

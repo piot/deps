@@ -43,7 +43,7 @@ func HTTPGet(downloadURL *url.URL, log *clog.Log) (content io.Reader, err error)
 	if err != nil {
 		return
 	}
-	timeout := time.Second * 2
+	timeout := time.Second * 10
 	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 	request = request.WithContext(ctx)
 

@@ -108,6 +108,9 @@ func readConfigFromLocalPackageName(rootPath string, packageName string, log *cl
 	directoryName := RepoNameToShortName(packageName)
 	packageDirectory := path.Join(rootPath, directoryName)
 	conf, confErr := ReadConfigFromDirectory(packageDirectory)
+	if confErr != nil {
+		return nil, confErr
+	}
 	if conf.Name != packageName {
 		return nil, fmt.Errorf("name mismatch %v vs %v", conf.Name, packageName)
 	}
