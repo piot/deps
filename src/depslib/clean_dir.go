@@ -47,16 +47,25 @@ func CleanTempDirectory(tempSuffix string, log *clog.Log) (string, error) {
 }
 
 func CleanDirectoryWithBackup(directory string, tempSuffix string, log *clog.Log) (string, error) {
-	backupDir, tempErr := CleanTempDirectoryEx(filepath.Dir(directory), tempSuffix, log)
-	if tempErr != nil {
-		return "", tempErr
+	stat, statErr := os.Stat(directory)
+	_, isPathError := statErr.(*os.PathError)
+	if statErr != nil && !isPathError {
+		return "", statErr
 	}
-	log.Debug("clean directory", clog.String("directory", directory), clog.String("backupDir", backupDir))
-	backupSubDir := filepath.Join(backupDir, tempSuffix)
+	existingDir := !isPathError && stat.IsDir()
+	if existingDir {
+		backupDir, tempErr := CleanTempDirectoryEx(filepath.Dir(directory), tempSuffix, log)
+		if tempErr != nil {
+			return "", tempErr
+		}
+		log.Debug("clean directory", clog.String("directory", directory), clog.String("backupDir", backupDir))
+		backupSubDir := filepath.Join(backupDir, tempSuffix)
 
-	renameErr := os.Rename(directory, backupSubDir)
-	if renameErr != nil {
-		return "", renameErr
+		renameErr := os.Rename(directory, backupSubDir)
+		if renameErr != nil {
+			return "", renameErr
+		}
+		return backupDir, nil
 	}
-	return backupDir, nil
+	return "", os.MkdirAll(directory, os.ModePerm)
 }
