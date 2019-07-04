@@ -40,7 +40,6 @@ func FindClosestConfigurationFile(startPath string) (string, error) {
 	}
 
 	for {
-		fmt.Printf("testing %v \n", directory)
 		if directory == "." || directory == "/" {
 			return "", fmt.Errorf("not found")
 		}

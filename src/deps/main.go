@@ -28,24 +28,36 @@ package main
 
 import (
 	"flag"
+	"os"
 
+	"github.com/piot/deps/src/ccompile"
 	"github.com/piot/deps/src/depslib"
 	"github.com/piot/log-go/src/clog"
+	"github.com/piot/log-go/src/clogint"
 )
 
 func run(log *clog.Log) error {
-	useSymlink := flag.Bool("l", false, "use local symlink instead of download")
-	flag.Parse()
 	foundConf, foundErr := depslib.FindClosestConfigurationFile(".")
 	if foundErr != nil {
 		return foundErr
 	}
-	err := depslib.SetupDependencies(foundConf, *useSymlink, log)
-	return err
+	dependencyInfo, err := depslib.SetupDependencies(foundConf, log)
+	if err != nil {
+		return err
+	}
+	if len(os.Args) >= 2 {
+		if os.Args[1] == "build" {
+			return ccompile.Build(dependencyInfo, log)
+		}
+	}
+	useSymlink := flag.Bool("l", false, "use local symlink instead of download")
+	flag.Parse()
+	return depslib.Install(dependencyInfo, *useSymlink, log)
 }
 
 func main() {
 	log := clog.DefaultLog()
+	log.SetLogLevel(clogint.Debug)
 	log.Info("deps")
 	err := run(log)
 	if err != nil {

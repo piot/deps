@@ -120,9 +120,26 @@ func readConfigFromLocalPackageName(rootPath string, packageName string, log *cl
 type DependencyNode struct {
 	name            string
 	version         semver.Version
+	artifactType    ArtifactType
 	dependencies    []*DependencyNode
 	development     []*DependencyNode
 	dependingOnThis []*DependencyNode
+}
+
+func (n *DependencyNode) Name() string {
+	return n.name
+}
+
+func (n *DependencyNode) ArtifactType() ArtifactType {
+	return n.artifactType
+}
+
+func (n *DependencyNode) ShortName() string {
+	return RepoNameToShortName(n.name)
+}
+
+func (n *DependencyNode) Dependencies() []*DependencyNode {
+	return n.dependencies
 }
 
 func (n *DependencyNode) AddDependingOnThis(node *DependencyNode) {
@@ -151,7 +168,10 @@ func (n *DependencyNode) Print(indent int) {
 	}
 }
 
-func install(rootPath string, packageRootPath string, nodes map[string]*DependencyNode, useSymlink bool, log *clog.Log) error {
+func Install(dependencyInfo *DependencyInfo, useSymlink bool, log *clog.Log) error {
+	rootPath := dependencyInfo.RootPath
+	packageRootPath := dependencyInfo.PackageRootPath
+	nodes := dependencyInfo.RootNodes
 	depsPath := path.Join(packageRootPath, "deps/")
 	_, statErr := os.Stat(depsPath)
 	if statErr == nil {
@@ -168,6 +188,13 @@ func install(rootPath string, packageRootPath string, nodes map[string]*Dependen
 		}
 	}
 	return nil
+}
+
+type DependencyInfo struct {
+	RootPath        string
+	PackageRootPath string
+	RootNodes       []*DependencyNode
+	RootNode        *DependencyNode
 }
 
 type Cache struct {
@@ -188,7 +215,7 @@ func (c *Cache) AddNode(name string, node *DependencyNode) {
 func handleNode(rootPath string, node *DependencyNode, cache *Cache, depName string, log *clog.Log) (*DependencyNode, error) {
 	foundNode := cache.FindNode(depName)
 	if foundNode == nil {
-		log.Info("didnt find it, need to read", clog.String("depName", depName))
+		log.Trace("didnt find it, need to read", clog.String("depName", depName))
 		depConf, confErr := readConfigFromLocalPackageName(rootPath, depName, log)
 		if confErr != nil {
 			return nil, confErr
@@ -202,8 +229,30 @@ func handleNode(rootPath string, node *DependencyNode, cache *Cache, depName str
 	return foundNode, nil
 }
 
+type ArtifactType uint
+
+const (
+	Library ArtifactType = iota
+	ConsoleApplication
+	Application
+)
+
+func ToArtifactType(v string) ArtifactType {
+	if v == "lib" {
+		return Library
+	}
+	if v == "console" {
+		return ConsoleApplication
+	}
+	if v == "executable" {
+		return Application
+	}
+	return Library
+}
+
 func convertFromConfigNode(rootPath string, conf *Config, cache *Cache, log *clog.Log) (*DependencyNode, error) {
-	node := &DependencyNode{name: conf.Name, version: semver.MustParse(conf.Version)}
+	artifactType := ToArtifactType(conf.ArtifactType)
+	node := &DependencyNode{name: conf.Name, version: semver.MustParse(conf.Version), artifactType: artifactType}
 	cache.AddNode(conf.Name, node)
 	for _, dep := range conf.Dependencies {
 		foundNode, handleErr := handleNode(rootPath, node, cache, dep.Name, log)
@@ -232,18 +281,26 @@ func calculateTotalDependencies(rootPath string, conf *Config, log *clog.Log) (*
 	return cache, rootNode, rootNodeErr
 }
 
-func SetupDependencies(filename string, useSymlink bool, log *clog.Log) error {
+func SetupDependencies(filename string, log *clog.Log) (*DependencyInfo, error) {
 	conf, confErr := ReadConfigFromFilename(filename)
 	if confErr != nil {
-		return confErr
+		return nil, confErr
 	}
 	packageRootPath := path.Dir(filename)
 	rootPath := path.Dir(packageRootPath)
-	fmt.Printf("roootpath:%v\n", rootPath)
 	cache, rootNode, rootNodeErr := calculateTotalDependencies(rootPath, conf, log)
 	if rootNodeErr != nil {
-		return rootNodeErr
+		return nil, rootNodeErr
 	}
-	rootNode.Print(0)
-	return install(rootPath, packageRootPath, cache.nodes, useSymlink, log)
+	var rootNodes []*DependencyNode
+	for _, node := range cache.nodes {
+		if node.name == rootNode.name {
+			continue
+		}
+		rootNodes = append(rootNodes, node)
+	}
+
+	//rootNode.Print(0)
+	info := &DependencyInfo{RootPath: rootPath, PackageRootPath: packageRootPath, RootNode: rootNode, RootNodes: rootNodes}
+	return info, nil
 }

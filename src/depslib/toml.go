@@ -50,6 +50,7 @@ type Config struct {
 	DepsVersion  string
 	Version      string
 	Name         string
+	ArtifactType string
 	Dependencies []Package
 	Development  []Package
 }
@@ -67,7 +68,6 @@ func ReadFromReader(reader io.Reader) (*Config, error) {
 	if tomlParseErr != nil {
 		return nil, tomlParseErr
 	}
-	fmt.Printf("version:%v\n", string(tomlString))
 	config := &Config{}
 	unmarshalErr := toml.Unmarshal(tomlString, config)
 	if unmarshalErr != nil {
