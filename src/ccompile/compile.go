@@ -93,9 +93,15 @@ func Build(info *depslib.DependencyInfo, log *clog.Log) error {
 
 	flags := []string{"-g", "--std=c11",
 		//"-Wall", "-Weverything", "-pedantic", "-Werror",
-		"-Wno-cast-align", "-Wno-extra-semi-stmt",
+		"-Wno-cast-align",
 		"-Wno-padded", "-Wno-cast-qual",
 		"-Wno-gnu-folding-constant", "-Wno-unused-macros"}
-
+	operatingSytem := depsbuild.DetectOS()
+	switch operatingSytem {
+	case depsbuild.MacOS:
+		flags = append(flags, "-Wno-extra-semi")
+	default:
+		flags = append(flags, "-Wno-extra-semi-stmt")
+	}
 	return depsbuild.Build(flags, sourceLibs, includePaths, defines, linkFlags, log)
 }
