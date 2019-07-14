@@ -64,19 +64,23 @@ func Build(info *depslib.DependencyInfo, log *clog.Log) error {
 	if directoryExists(ownSrcExample) {
 		sourceLibs = append(sourceLibs, ownSrcExample)
 	}
+	artifactType := info.RootNode.ArtifactType()
 	linkFlags := []string{"-lm"}
 	localMain := "main.c"
 	if fileExists(localMain) {
+		artifactType = depslib.Application
 		sourceLibs = append(sourceLibs, ".")
 		operatingSystem := depsbuild.DetectOS()
 		if operatingSystem == depsbuild.MacOS || operatingSystem == depsbuild.Linux {
 			log.Debug("adding SDL main")
 			sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
+			sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
 			linkFlags = append(linkFlags, "-lSDL2")
+			linkFlags = append(linkFlags, "-framework OpenGL")
+
 		}
 	}
 
-	artifactType := info.RootNode.ArtifactType()
 	if artifactType == depslib.Library {
 		linkFlags = append(linkFlags, "-shared")
 		linkFlags = append(linkFlags, "-fPIC")
@@ -92,7 +96,9 @@ func Build(info *depslib.DependencyInfo, log *clog.Log) error {
 	defines = append(defines, "CONFIGURATION_DEBUG")
 
 	flags := []string{"-g", "--std=c11",
-		//"-Wall", "-Weverything", "-pedantic", "-Werror",
+		"-Wall", "-Weverything",
+		// "-pedantic", "-Werror",
+		"-Wno-sign-conversion", "-Wno-conversion", "-Wno-unused-parameter",
 		"-Wno-cast-align",
 		"-Wno-padded", "-Wno-cast-qual",
 		"-Wno-gnu-folding-constant", "-Wno-unused-macros"}

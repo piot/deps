@@ -37,11 +37,11 @@ import (
 )
 
 func run(log *clog.Log) error {
-	foundConf, foundErr := depslib.FindClosestConfigurationFile(".")
+	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".")
 	if foundErr != nil {
 		return foundErr
 	}
-	dependencyInfo, err := depslib.SetupDependencies(foundConf, log)
+	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], log)
 	if err != nil {
 		return err
 	}

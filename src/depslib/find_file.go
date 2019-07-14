@@ -33,25 +33,27 @@ import (
 	"path/filepath"
 )
 
-func FindClosestConfigurationFile(startPath string) (string, error) {
+func FindClosestConfigurationFiles(startPath string) ([]string, error) {
 	directory, directoryErr := filepath.Abs(startPath)
 	if directoryErr != nil {
-		return "", directoryErr
+		return nil, directoryErr
 	}
+
+	var foundRoots []string
 
 	for {
 		if directory == "." || directory == "/" {
-			return "", fmt.Errorf("not found")
+			return nil, fmt.Errorf("not found")
 		}
 		configurationFilename := path.Join(directory, "deps.toml")
 		foundConfiguration, foundConfigurationErr := os.Lstat(configurationFilename)
 		if foundConfigurationErr == nil && !foundConfiguration.IsDir() {
-			return configurationFilename, nil
+			foundRoots = append(foundRoots, configurationFilename)
 		}
 
 		foundGitDir, foundGitErr := os.Lstat(path.Join(directory, ".git"))
 		if foundGitErr == nil && foundGitDir.IsDir() {
-
+			return foundRoots, nil
 		}
 		directory = filepath.Dir(directory)
 	}
