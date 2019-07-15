@@ -38,7 +38,7 @@ func libRecursive(searchDir string) ([]string, error) {
 	return fileList, err
 }
 
-func Build(info *depslib.DependencyInfo, log *clog.Log) error {
+func Build(info *depslib.DependencyInfo, log *clog.Log) ([]string, error) {
 	depsPath := filepath.Join(info.PackageRootPath, "deps/")
 	var sourceLibs []string
 	for _, node := range info.RootNodes {
@@ -46,7 +46,7 @@ func Build(info *depslib.DependencyInfo, log *clog.Log) error {
 		if directoryExists(libPath) {
 			allDirs, recursiveErr := libRecursive(libPath)
 			if recursiveErr != nil {
-				return recursiveErr
+				return nil, recursiveErr
 			}
 			sourceLibs = append(sourceLibs, allDirs...)
 		}
@@ -55,7 +55,7 @@ func Build(info *depslib.DependencyInfo, log *clog.Log) error {
 	if directoryExists(ownSrcLib) {
 		allOwnSrcLib, allOwnSrcLibErr := libRecursive(ownSrcLib)
 		if allOwnSrcLibErr != nil {
-			return allOwnSrcLibErr
+			return nil, allOwnSrcLibErr
 		}
 		sourceLibs = append(sourceLibs, allOwnSrcLib...)
 	}

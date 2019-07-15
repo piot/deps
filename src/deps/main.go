@@ -32,6 +32,7 @@ import (
 
 	"github.com/piot/deps/src/ccompile"
 	"github.com/piot/deps/src/depslib"
+	depsrun "github.com/piot/deps/src/run"
 	"github.com/piot/log-go/src/clog"
 	"github.com/piot/log-go/src/clogint"
 )
@@ -46,8 +47,12 @@ func run(log *clog.Log) error {
 		return err
 	}
 	if len(os.Args) >= 2 {
-		if os.Args[1] == "build" {
-			return ccompile.Build(dependencyInfo, log)
+		cmd := os.Args[1]
+		if cmd == "build" {
+			_, buildErr := ccompile.Build(dependencyInfo, log)
+			return buildErr
+		} else if cmd == "run" {
+			return depsrun.Run(dependencyInfo, log)
 		}
 	}
 	useSymlink := flag.Bool("l", false, "use local symlink instead of download")

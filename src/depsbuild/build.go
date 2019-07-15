@@ -91,11 +91,14 @@ func SuffixExtension(sources []string, suffix string, wd string) string {
 	return result
 }
 
-func Build(flags []string, sources []string, includes []string, defines []string, linkFlags []string, log *clog.Log) error {
+func Build(flags []string, sources []string, includes []string, defines []string, linkFlags []string, log *clog.Log) ([]string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	outputFilename := "./a.out"
+	_ = os.Remove(outputFilename)
 
 	compileSources := SuffixExtension(sources, "*.c", dir)
 	allDefines := append(defines, OSDefine())
@@ -103,6 +106,10 @@ func Build(flags []string, sources []string, includes []string, defines []string
 	includeString := PrefixFile(includes, "-I ", dir)
 	flagString := strings.Join(flags, " ")
 	linkFlagString := strings.Join(linkFlags, " ")
+	executeErr := Execute(log, "clang", flagString, compileSources, defineString, includeString, linkFlagString)
+	if executeErr != nil {
+		return nil, executeErr
+	}
 
-	return Execute(log, "clang", flagString, compileSources, defineString, includeString, linkFlagString)
+	return []string{outputFilename}, nil
 }
