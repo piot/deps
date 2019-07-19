@@ -235,6 +235,7 @@ const (
 	Library ArtifactType = iota
 	ConsoleApplication
 	Application
+	Inherit
 )
 
 func ToArtifactType(v string) ArtifactType {

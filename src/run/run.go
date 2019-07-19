@@ -7,8 +7,8 @@ import (
 	"github.com/piot/log-go/src/clog"
 )
 
-func Run(info *depslib.DependencyInfo, log *clog.Log) error {
-	artifacts, err := ccompile.Build(info, log)
+func Run(info *depslib.DependencyInfo, override depslib.ArtifactType, log *clog.Log) error {
+	artifacts, err := ccompile.Build(info, override, log)
 	if err != nil {
 		return err
 	}

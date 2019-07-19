@@ -49,10 +49,17 @@ func run(log *clog.Log) error {
 	if len(os.Args) >= 2 {
 		cmd := os.Args[1]
 		if cmd == "build" {
-			_, buildErr := ccompile.Build(dependencyInfo, log)
+			override := depslib.Inherit
+			if len(os.Args) >= 3 {
+				artifact := os.Args[2]
+				if artifact == "console" {
+					override = depslib.ConsoleApplication
+				}
+			}
+			_, buildErr := ccompile.Build(dependencyInfo, override, log)
 			return buildErr
 		} else if cmd == "run" {
-			return depsrun.Run(dependencyInfo, log)
+			return depsrun.Run(dependencyInfo, depslib.Inherit, log)
 		}
 	}
 	useSymlink := flag.Bool("l", false, "use local symlink instead of download")

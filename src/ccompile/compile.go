@@ -38,7 +38,7 @@ func libRecursive(searchDir string) ([]string, error) {
 	return fileList, err
 }
 
-func Build(info *depslib.DependencyInfo, log *clog.Log) ([]string, error) {
+func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactType, log *clog.Log) ([]string, error) {
 	depsPath := filepath.Join(info.PackageRootPath, "deps/")
 	var sourceLibs []string
 	for _, node := range info.RootNodes {
@@ -59,24 +59,36 @@ func Build(info *depslib.DependencyInfo, log *clog.Log) ([]string, error) {
 		}
 		sourceLibs = append(sourceLibs, allOwnSrcLib...)
 	}
-
-	ownSrcExample := filepath.Join(info.PackageRootPath, "src/examples")
-	if directoryExists(ownSrcExample) {
-		sourceLibs = append(sourceLibs, ownSrcExample)
-	}
+	/*
+		ownSrcExample := filepath.Join(info.PackageRootPath, "src/examples")
+		if directoryExists(ownSrcExample) {
+			sourceLibs = append(sourceLibs, ownSrcExample)
+		}
+	*/
 	artifactType := info.RootNode.ArtifactType()
 	linkFlags := []string{"-lm"}
 	localMain := "main.c"
 	if fileExists(localMain) {
 		artifactType = depslib.Application
+		if artifactTypeOverride != depslib.Inherit {
+			artifactType = artifactTypeOverride
+		}
 		sourceLibs = append(sourceLibs, ".")
 		operatingSystem := depsbuild.DetectOS()
 		if operatingSystem == depsbuild.MacOS || operatingSystem == depsbuild.Linux {
-			log.Debug("adding SDL main")
-			sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
-			sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
-			linkFlags = append(linkFlags, "-lSDL2")
-			linkFlags = append(linkFlags, "-framework OpenGL")
+			if artifactType == depslib.ConsoleApplication {
+				log.Debug("adding console main")
+				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/posix/"))
+				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
+				//linkFlags = append(linkFlags, "-lSDL2")
+				//linkFlags = append(linkFlags, "-framework OpenGL")
+			} else {
+				log.Debug("adding SDL main")
+				sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
+				sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
+				linkFlags = append(linkFlags, "-lSDL2")
+				linkFlags = append(linkFlags, "-framework OpenGL")
+			}
 
 		}
 	}
@@ -97,6 +109,7 @@ func Build(info *depslib.DependencyInfo, log *clog.Log) ([]string, error) {
 
 	flags := []string{"-g", "--std=c11",
 		"-Wall", "-Weverything",
+		"-Wno-disabled-macro-expansion", "-Wno-reserved-id-macro", "-Wno-documentation", "-Wno-comma", "-Wno-double-promotion", "-Wno-c++-compat", "-Wno-covered-switch-default",
 		// "-pedantic", "-Werror",
 		"-Wno-sign-conversion", "-Wno-conversion", "-Wno-unused-parameter",
 		"-Wno-cast-align",
