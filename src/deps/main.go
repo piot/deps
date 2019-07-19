@@ -42,7 +42,9 @@ func run(log *clog.Log) error {
 	if foundErr != nil {
 		return foundErr
 	}
-	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], log)
+	useSymlink := flag.Bool("l", false, "use local symlink instead of download")
+	flag.Parse()
+	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], *useSymlink, log)
 	if err != nil {
 		return err
 	}
@@ -62,9 +64,7 @@ func run(log *clog.Log) error {
 			return depsrun.Run(dependencyInfo, depslib.Inherit, log)
 		}
 	}
-	useSymlink := flag.Bool("l", false, "use local symlink instead of download")
-	flag.Parse()
-	return depslib.Install(dependencyInfo, *useSymlink, log)
+	return nil
 }
 
 func main() {
@@ -76,4 +76,5 @@ func main() {
 		log.Err(err)
 		os.Exit(1)
 	}
+	log.Info("done")
 }

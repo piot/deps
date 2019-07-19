@@ -35,6 +35,7 @@ import (
 	"strings"
 
 	toml "github.com/pelletier/go-toml"
+	"github.com/piot/log-go/src/clog"
 )
 
 type Package struct {
@@ -88,7 +89,8 @@ func ReadConfigFromFilename(filename string) (*Config, error) {
 	return ReadFromReader(reader)
 }
 
-func ReadConfigFromDirectory(directory string) (*Config, error) {
+func ReadConfigFromDirectory(directory string, log *clog.Log) (*Config, error) {
+	log.Debug("read config", clog.String("directory", directory))
 	info, statErr := os.Stat(directory)
 	if statErr != nil {
 		return nil, statErr

@@ -79,7 +79,7 @@ func MakeSymlink(existingFilename string, symlinkFilename string, log *clog.Log)
 		return createDirectoryErr
 	}
 
-	log.Trace("make symlink", clog.String("from", existingFilename), clog.String("to", symlinkFilename))
+	log.Debug("make symlink", clog.String("from", existingFilename), clog.String("to", symlinkFilename))
 	return os.Symlink(existingFilename, symlinkFilename)
 }
 

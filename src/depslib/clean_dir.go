@@ -16,6 +16,18 @@ func TempDirectory(tempSuffix string) (string, error) {
 	return dir, err
 }
 
+func BackupDeps(depsPath string, log *clog.Log) error {
+	_, statErr := os.Stat(depsPath)
+	if statErr == nil {
+		_, cleanErr := CleanDirectoryWithBackup(depsPath, "deps.clean", log)
+		if cleanErr != nil {
+			return cleanErr
+		}
+	}
+
+	return nil
+}
+
 func CleanDirectory(directory string, log *clog.Log) error {
 	os.RemoveAll(directory)
 	mkdirErr := os.MkdirAll(directory, os.ModePerm)
