@@ -74,5 +74,6 @@ func main() {
 	err := run(log)
 	if err != nil {
 		log.Err(err)
+		os.Exit(1)
 	}
 }

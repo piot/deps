@@ -33,17 +33,17 @@ import (
 	"path/filepath"
 )
 
-func FindClosestConfigurationFiles(startPath string) ([]string, error) {
+func find(startPath string) ([]string, error) {
 	directory, directoryErr := filepath.Abs(startPath)
 	if directoryErr != nil {
 		return nil, directoryErr
 	}
-
 	var foundRoots []string
 
 	for {
-		if directory == "." || directory == "/" {
-			return nil, fmt.Errorf("not found")
+		foundDirectory, foundDirectoryErr := os.Lstat(directory)
+		if foundDirectoryErr != nil || !foundDirectory.IsDir() {
+			return foundRoots, nil
 		}
 		configurationFilename := path.Join(directory, "deps.toml")
 		foundConfiguration, foundConfigurationErr := os.Lstat(configurationFilename)
@@ -55,6 +55,18 @@ func FindClosestConfigurationFiles(startPath string) ([]string, error) {
 		if foundGitErr == nil && foundGitDir.IsDir() {
 			return foundRoots, nil
 		}
+		if directory == "." || directory == "/" {
+			return foundRoots, nil
+		}
 		directory = filepath.Dir(directory)
 	}
+
+}
+
+func FindClosestConfigurationFiles(startPath string) ([]string, error) {
+	roots, rootsErr := find(startPath)
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("no deps.toml file found")
+	}
+	return roots, rootsErr
 }
