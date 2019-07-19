@@ -72,8 +72,8 @@ func find(startPath string, log *clog.Log) ([]string, error) {
 
 }
 
-func FindClosestConfigurationFiles(startPath string) ([]string, error) {
-	roots, rootsErr := find(startPath)
+func FindClosestConfigurationFiles(startPath string, log *clog.Log) ([]string, error) {
+	roots, rootsErr := find(startPath, log)
 	if len(roots) == 0 {
 		return nil, fmt.Errorf("no deps.toml file found")
 	}

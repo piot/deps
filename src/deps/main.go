@@ -38,7 +38,7 @@ import (
 )
 
 func run(log *clog.Log) error {
-	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".")
+	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".", log)
 	if foundErr != nil {
 		return foundErr
 	}
