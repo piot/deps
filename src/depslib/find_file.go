@@ -31,9 +31,18 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/piot/log-go/src/clog"
 )
 
-func find(startPath string) ([]string, error) {
+func find(startPath string, log *clog.Log) ([]string, error) {
+	wd, wdErr := os.Getwd()
+	if wdErr != nil {
+		log.Err(wdErr)
+		return nil, wdErr
+	}
+	log.Info("getwd", clog.String("wd", wd))
+
 	directory, directoryErr := filepath.Abs(startPath)
 	if directoryErr != nil {
 		return nil, directoryErr
