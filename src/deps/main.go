@@ -28,11 +28,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
-	"github.com/piot/deps/src/ccompile"
+	"github.com/piot/deps/src/command"
 	"github.com/piot/deps/src/depslib"
-	depsrun "github.com/piot/deps/src/run"
 	"github.com/piot/log-go/src/clog"
 	"github.com/piot/log-go/src/clogint"
 )
@@ -42,27 +42,27 @@ func run(log *clog.Log) error {
 	if foundErr != nil {
 		return foundErr
 	}
-	useSymlink := flag.Bool("l", false, "use local symlink instead of download")
-	flag.Parse()
-	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], *useSymlink, log)
-	if err != nil {
-		return err
+
+	if len(os.Args) < 2 {
+		return fmt.Errorf("subcommand is required")
 	}
-	if len(os.Args) >= 2 {
-		cmd := os.Args[1]
-		if cmd == "build" {
-			override := depslib.Inherit
-			if len(os.Args) >= 3 {
-				artifact := os.Args[2]
-				if artifact == "console" {
-					override = depslib.ConsoleApplication
-				}
-			}
-			_, buildErr := ccompile.Build(dependencyInfo, override, log)
-			return buildErr
-		} else if cmd == "run" {
-			return depsrun.Run(dependencyInfo, depslib.Inherit, log)
-		}
+	general := flag.NewFlagSet("default", flag.ExitOnError)
+	useSymlink := general.Bool("l", false, "use local symlink instead of download")
+	artifactType := general.String("a", "application", "artifact")
+	general.Parse(os.Args[2:])
+	o := command.Options{}
+	o.UseSymlink = *useSymlink
+	o.Artifact = depslib.Inherit
+	if *artifactType == "console" {
+		o.Artifact = depslib.ConsoleApplication
+	}
+
+	cmd := os.Args[1]
+	switch cmd {
+	case "build":
+		command.Build(foundConfs, o, log)
+	case "run":
+		command.Run(foundConfs, o, log)
 	}
 	return nil
 }

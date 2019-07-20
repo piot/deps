@@ -28,10 +28,13 @@ package depslib
 
 import (
 	"testing"
+
+	"github.com/piot/log-go/src/clog"
 )
 
 func TestToml(t *testing.T) {
-	conf, err := ReadConfigFromDirectory("../../test/first/")
+	log := clog.DefaultLog()
+	conf, err := ReadConfigFromDirectory("../../test/first/", log)
 	if err != nil {
 		t.Fatal(err)
 	}

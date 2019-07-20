@@ -39,6 +39,7 @@ func libRecursive(searchDir string) ([]string, error) {
 }
 
 func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactType, log *clog.Log) ([]string, error) {
+
 	depsPath := filepath.Join(info.PackageRootPath, "deps/")
 	var sourceLibs []string
 	for _, node := range info.RootNodes {
@@ -87,7 +88,11 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 				sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
 				sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
 				linkFlags = append(linkFlags, "-lSDL2")
-				linkFlags = append(linkFlags, "-framework OpenGL")
+				if operatingSystem == depsbuild.MacOS {
+					linkFlags = append(linkFlags, "-framework OpenGL")
+				} else {
+					linkFlags = append(linkFlags, "-lGL")
+				}
 			}
 
 		}
