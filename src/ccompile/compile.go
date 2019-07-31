@@ -111,8 +111,9 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 	var defines []string
 	defines = append(defines, "_POSIX_C_SOURCE=200112L")
 	defines = append(defines, "CONFIGURATION_DEBUG")
+	defines = append(defines, "TYRAN_CONFIGURATION_DEBUG")
 
-	flags := []string{"-g", "--std=c11",
+	flags := []string{"-g", "-O0", "--std=c11",
 		"-Wall", "-Weverything",
 		"-Wno-disabled-macro-expansion", "-Wno-reserved-id-macro", "-Wno-documentation", "-Wno-comma", "-Wno-double-promotion", "-Wno-c++-compat", "-Wno-covered-switch-default",
 		// "-pedantic", "-Werror",
