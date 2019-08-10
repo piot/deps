@@ -109,7 +109,9 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 	linkFlags := []string{"-lm"}
 	localMain := "main.c"
 	if fileExists(localMain) {
-		artifactType = depslib.Application
+		if artifactType == depslib.Library {
+			artifactType = depslib.Application
+		}
 		if artifactTypeOverride != depslib.Inherit {
 			artifactType = artifactTypeOverride
 		}
@@ -117,13 +119,13 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 
 		if operatingSystem == depsbuild.MacOS || operatingSystem == depsbuild.Linux {
 			if artifactType == depslib.ConsoleApplication {
-				log.Debug("adding console main")
+				log.Info("adding console main")
 				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/posix/"))
 				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
 				//linkFlags = append(linkFlags, "-lSDL2")
 				//linkFlags = append(linkFlags, "-framework OpenGL")
 			} else {
-				log.Debug("adding SDL main")
+				log.Info("adding SDL main")
 				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
 				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
 				linkFlags = append(linkFlags, "-lSDL2")
