@@ -38,8 +38,20 @@ func libRecursive(searchDir string) ([]string, error) {
 	return fileList, err
 }
 
-func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactType, log *clog.Log) ([]string, error) {
+func OSName(os depsbuild.OperatingSystem) string {
+	switch os {
+	case depsbuild.MacOS:
+		return "macos"
+	case depsbuild.Linux:
+		return "posix"
+	case depsbuild.Windows:
+		return "windows"
+	}
+	return ""
+}
 
+func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactType, log *clog.Log) ([]string, error) {
+	operatingSystem := depsbuild.DetectOS()
 	depsPath := filepath.Join(info.PackageRootPath, "deps/")
 	var sourceLibs []string
 	for _, node := range info.RootNodes {
@@ -50,6 +62,33 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 				return nil, recursiveErr
 			}
 			sourceLibs = append(sourceLibs, allDirs...)
+		}
+		sdlSpecific := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl")
+		if directoryExists(sdlSpecific) {
+			allDirs, recursiveErr := libRecursive(sdlSpecific)
+			if recursiveErr != nil {
+				return nil, recursiveErr
+			}
+			sourceLibs = append(sourceLibs, allDirs...)
+
+			sdlCommon := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl_common")
+			if directoryExists(sdlCommon) {
+				allDirs, recursiveErr := libRecursive(sdlCommon)
+				if recursiveErr != nil {
+					return nil, recursiveErr
+				}
+				sourceLibs = append(sourceLibs, allDirs...)
+			}
+		} else {
+
+			platformSpecific := filepath.Join(depsPath, node.ShortName(), "src/platform/", OSName(operatingSystem))
+			if directoryExists(platformSpecific) {
+				allDirs, recursiveErr := libRecursive(platformSpecific)
+				if recursiveErr != nil {
+					return nil, recursiveErr
+				}
+				sourceLibs = append(sourceLibs, allDirs...)
+			}
 		}
 	}
 	ownSrcLib := filepath.Join(info.PackageRootPath, "src/lib")
@@ -75,7 +114,7 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 			artifactType = artifactTypeOverride
 		}
 		sourceLibs = append(sourceLibs, ".")
-		operatingSystem := depsbuild.DetectOS()
+
 		if operatingSystem == depsbuild.MacOS || operatingSystem == depsbuild.Linux {
 			if artifactType == depslib.ConsoleApplication {
 				log.Debug("adding console main")
@@ -85,8 +124,8 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 				//linkFlags = append(linkFlags, "-framework OpenGL")
 			} else {
 				log.Debug("adding SDL main")
-				sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
-				sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
+				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
+				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
 				linkFlags = append(linkFlags, "-lSDL2")
 				if operatingSystem == depsbuild.MacOS {
 					linkFlags = append(linkFlags, "-framework OpenGL")
