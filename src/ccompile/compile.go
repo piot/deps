@@ -50,8 +50,32 @@ func OSName(os depsbuild.OperatingSystem) string {
 	return ""
 }
 
-func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactType, log *clog.Log) ([]string, error) {
+func platformSpecificPath(depsPath string, node *depslib.DependencyNode, platformName string) string {
+	return filepath.Join(depsPath, node.ShortName(), "src/platform/", platformName)
+}
+
+func existsPlatformSpecificPath(depsPath string, node *depslib.DependencyNode, platformName string) (string, bool) {
+	platformPath := platformSpecificPath(depsPath, node, platformName)
+	return platformPath, directoryExists(platformPath)
+}
+
+func platformSpecific(depsPath string, node *depslib.DependencyNode, fallbackPlatformName string) string {
 	operatingSystem := depsbuild.DetectOS()
+
+	calculatedPath, doesExist := existsPlatformSpecificPath(depsPath, node, OSName(operatingSystem))
+	if doesExist {
+		return calculatedPath
+	}
+	return platformSpecificPath(depsPath, node, fallbackPlatformName)
+}
+
+func findPlatformSpecific(depsPath string, node *depslib.DependencyNode) string {
+	fallbackPlatformName := "posix"
+
+	return platformSpecific(depsPath, node, fallbackPlatformName)
+}
+
+func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactType, log *clog.Log) ([]string, error) {
 	depsPath := filepath.Join(info.PackageRootPath, "deps/")
 	var sourceLibs []string
 	for _, node := range info.RootNodes {
@@ -80,8 +104,7 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 				sourceLibs = append(sourceLibs, allDirs...)
 			}
 		} else {
-
-			platformSpecific := filepath.Join(depsPath, node.ShortName(), "src/platform/", OSName(operatingSystem))
+			platformSpecific := findPlatformSpecific(depsPath, node)
 			if directoryExists(platformSpecific) {
 				allDirs, recursiveErr := libRecursive(platformSpecific)
 				if recursiveErr != nil {
@@ -116,6 +139,7 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 			artifactType = artifactTypeOverride
 		}
 		sourceLibs = append(sourceLibs, ".")
+		operatingSystem := depsbuild.DetectOS()
 
 		if operatingSystem == depsbuild.MacOS || operatingSystem == depsbuild.Linux {
 			if artifactType == depslib.ConsoleApplication {
