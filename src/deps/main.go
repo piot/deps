@@ -60,9 +60,9 @@ func run(log *clog.Log) error {
 	cmd := os.Args[1]
 	switch cmd {
 	case "build":
-		command.Build(foundConfs, o, log)
+		return command.Build(foundConfs, o, log)
 	case "run":
-		command.Run(foundConfs, o, log)
+		return command.Run(foundConfs, o, log)
 	}
 	return nil
 }
