@@ -27,54 +27,66 @@ SOFTWARE.
 package main
 
 import (
-	"flag"
-	"fmt"
-	"os"
-
+	"github.com/piot/cli-go/src/cli"
 	"github.com/piot/deps/src/command"
 	"github.com/piot/deps/src/depslib"
 	"github.com/piot/log-go/src/clog"
-	"github.com/piot/log-go/src/clogint"
 )
 
-func run(log *clog.Log) error {
+var Version string
+
+type SharedOptions struct {
+	Symlink  bool   `name:"symlink" short:"l"  help:"symlink using the parent directory instead of downloading"`
+	Artifact string `short:"a" optional:"" help:"override application type"`
+}
+
+type BuildCmd struct {
+	Shared SharedOptions `embed:""`
+}
+
+type RunCmd struct {
+	Shared SharedOptions `embed:""`
+}
+
+type Options struct {
+	Build   BuildCmd    `cmd:""`
+	Run     RunCmd      `cmd:""`
+	Options cli.Options `embed:""`
+}
+
+func stringToArtifactType(appType string) depslib.ArtifactType {
+	switch appType {
+	case "application":
+		return depslib.Application
+	case "console":
+		return depslib.ConsoleApplication
+	case "library":
+		return depslib.Library
+	}
+	return depslib.Inherit
+}
+
+func sharedOptionsToGeneralOptions(shared SharedOptions) command.Options {
+	generalOptions := command.Options{UseSymlink: shared.Symlink, Artifact: stringToArtifactType(shared.Artifact)}
+	return generalOptions
+}
+
+func (o *RunCmd) Run(log *clog.Log) error {
 	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".", log)
 	if foundErr != nil {
 		return foundErr
 	}
+	return command.Run(foundConfs, sharedOptionsToGeneralOptions(o.Shared), log)
+}
 
-	if len(os.Args) < 2 {
-		return fmt.Errorf("subcommand is required")
+func (o *BuildCmd) Run(log *clog.Log) error {
+	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".", log)
+	if foundErr != nil {
+		return foundErr
 	}
-	general := flag.NewFlagSet("default", flag.ExitOnError)
-	useSymlink := general.Bool("l", false, "use local symlink instead of download")
-	artifactType := general.String("a", "application", "artifact")
-	general.Parse(os.Args[2:])
-	o := command.Options{}
-	o.UseSymlink = *useSymlink
-	o.Artifact = depslib.Inherit
-	if *artifactType == "console" {
-		o.Artifact = depslib.ConsoleApplication
-	}
-
-	cmd := os.Args[1]
-	switch cmd {
-	case "build":
-		return command.Build(foundConfs, o, log)
-	case "run":
-		return command.Run(foundConfs, o, log)
-	}
-	return nil
+	return command.Build(foundConfs, sharedOptionsToGeneralOptions(o.Shared), log)
 }
 
 func main() {
-	log := clog.DefaultLog()
-	log.SetLogLevel(clogint.Debug)
-	log.Info("deps")
-	err := run(log)
-	if err != nil {
-		log.Err(err)
-		os.Exit(1)
-	}
-	log.Info("done")
+	cli.Run(&Options{}, cli.RunOptions{Version: Version, ApplicationType: cli.Utility}, nil)
 }
