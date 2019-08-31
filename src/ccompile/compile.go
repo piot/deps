@@ -69,6 +69,15 @@ func platformSpecific(depsPath string, node *depslib.DependencyNode, fallbackPla
 	return platformSpecificPath(depsPath, node, fallbackPlatformName)
 }
 
+func sourceArrayContains(sources []string, query string) bool {
+	for _, s := range sources {
+		if query == s {
+			return true
+		}
+	}
+	return false
+}
+
 func findPlatformSpecific(depsPath string, node *depslib.DependencyNode) string {
 	fallbackPlatformName := "posix"
 
@@ -138,7 +147,10 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 		if artifactTypeOverride != depslib.Inherit {
 			artifactType = artifactTypeOverride
 		}
-		sourceLibs = append(sourceLibs, ".")
+		thisDirectory, _ := filepath.Abs(".")
+		if !sourceArrayContains(sourceLibs, thisDirectory) {
+			sourceLibs = append(sourceLibs, thisDirectory)
+		}
 		operatingSystem := depsbuild.DetectOS()
 
 		if operatingSystem == depsbuild.MacOS || operatingSystem == depsbuild.Linux {
