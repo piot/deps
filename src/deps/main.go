@@ -88,5 +88,5 @@ func (o *BuildCmd) Run(log *clog.Log) error {
 }
 
 func main() {
-	cli.Run(&Options{}, cli.RunOptions{Version: Version, ApplicationType: cli.Utility}, nil)
+	cli.Run(&Options{}, cli.RunOptions{Version: Version, ApplicationType: cli.Utility})
 }
