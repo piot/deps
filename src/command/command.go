@@ -26,10 +26,10 @@ func Build(foundConfs []string, options Options, log *clog.Log) error {
 	return buildErr
 }
 
-func Run(foundConfs []string, options Options, log *clog.Log) error {
+func Run(foundConfs []string, options Options, runArgs []string, log *clog.Log) error {
 	dependencyInfo, depsErr := setupDependencies(foundConfs, options, log)
 	if depsErr != nil {
 		return depsErr
 	}
-	return depsrun.Run(dependencyInfo, options.Artifact, log)
+	return depsrun.Run(dependencyInfo, options.Artifact, runArgs, log)
 }

@@ -7,11 +7,12 @@ import (
 	"github.com/piot/log-go/src/clog"
 )
 
-func Run(info *depslib.DependencyInfo, override depslib.ArtifactType, log *clog.Log) error {
+func Run(info *depslib.DependencyInfo, override depslib.ArtifactType, runArgs []string, log *clog.Log) error {
 	artifacts, err := ccompile.Build(info, override, log)
 	if err != nil {
 		return err
 	}
 	primaryArtifact := artifacts[0]
-	return depsbuild.Execute(log, primaryArtifact)
+
+	return depsbuild.Execute(log, primaryArtifact, runArgs...)
 }

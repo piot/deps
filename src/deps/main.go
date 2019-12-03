@@ -45,7 +45,8 @@ type BuildCmd struct {
 }
 
 type RunCmd struct {
-	Shared SharedOptions `embed:""`
+	Shared  SharedOptions `embed:""`
+	RunArgs []string      `arg help:"run arguments"`
 }
 
 type Options struct {
@@ -76,7 +77,7 @@ func (o *RunCmd) Run(log *clog.Log) error {
 	if foundErr != nil {
 		return foundErr
 	}
-	return command.Run(foundConfs, sharedOptionsToGeneralOptions(o.Shared), log)
+	return command.Run(foundConfs, sharedOptionsToGeneralOptions(o.Shared), o.RunArgs, log)
 }
 
 func (o *BuildCmd) Run(log *clog.Log) error {
