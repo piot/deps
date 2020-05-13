@@ -12,6 +12,7 @@ func Run(info *depslib.DependencyInfo, override depslib.ArtifactType, runArgs []
 	if err != nil {
 		return err
 	}
+
 	primaryArtifact := artifacts[0]
 
 	return depsbuild.Execute(log, primaryArtifact, runArgs...)

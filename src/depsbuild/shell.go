@@ -10,7 +10,7 @@ import (
 
 func Execute(log *clog.Log, executable string, cmdStrings ...string) error {
 	debugString := executable + " " + strings.Join(cmdStrings, " ")
-	log.Debug("executing", clog.String("cmd", debugString))
+	log.Info("executing", clog.String("cmd", debugString))
 	cmd := exec.Command("bash", "-c", debugString)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout

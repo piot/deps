@@ -47,6 +47,7 @@ func OSName(os depsbuild.OperatingSystem) string {
 	case depsbuild.Windows:
 		return "windows"
 	}
+
 	return ""
 }
 
@@ -66,6 +67,7 @@ func platformSpecific(depsPath string, node *depslib.DependencyNode, fallbackPla
 	if doesExist {
 		return calculatedPath
 	}
+
 	return platformSpecificPath(depsPath, node, fallbackPlatformName)
 }
 
@@ -86,7 +88,9 @@ func findPlatformSpecific(depsPath string, node *depslib.DependencyNode) string 
 
 func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactType, log *clog.Log) ([]string, error) {
 	depsPath := filepath.Join(info.PackageRootPath, "deps/")
+
 	var sourceLibs []string
+
 	for _, node := range info.RootNodes {
 		libPath := filepath.Join(depsPath, node.ShortName(), "src/lib/")
 		if directoryExists(libPath) {
@@ -94,14 +98,18 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 			if recursiveErr != nil {
 				return nil, recursiveErr
 			}
+
 			sourceLibs = append(sourceLibs, allDirs...)
 		}
+
 		sdlSpecific := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl")
+		//nolint: nestif
 		if directoryExists(sdlSpecific) {
 			allDirs, recursiveErr := libRecursive(sdlSpecific)
 			if recursiveErr != nil {
 				return nil, recursiveErr
 			}
+
 			sourceLibs = append(sourceLibs, allDirs...)
 
 			sdlCommon := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl_common")
@@ -110,6 +118,7 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 				if recursiveErr != nil {
 					return nil, recursiveErr
 				}
+
 				sourceLibs = append(sourceLibs, allDirs...)
 			}
 		} else {
@@ -123,47 +132,45 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 			}
 		}
 	}
+
 	ownSrcLib := filepath.Join(info.PackageRootPath, "src/lib")
 	if directoryExists(ownSrcLib) {
 		allOwnSrcLib, allOwnSrcLibErr := libRecursive(ownSrcLib)
 		if allOwnSrcLibErr != nil {
 			return nil, allOwnSrcLibErr
 		}
+
 		sourceLibs = append(sourceLibs, allOwnSrcLib...)
 	}
-	/*
-		ownSrcExample := filepath.Join(info.PackageRootPath, "src/examples")
-		if directoryExists(ownSrcExample) {
-			sourceLibs = append(sourceLibs, ownSrcExample)
-		}
-	*/
+
+	useSDL := false
+
 	artifactType := info.RootNode.ArtifactType()
 	linkFlags := []string{"-lm"}
+
 	localMain := "main.c"
+	//nolint: nestif
 	if fileExists(localMain) {
 		if artifactType == depslib.Library {
 			artifactType = depslib.Application
 		}
+
 		if artifactTypeOverride != depslib.Inherit {
 			artifactType = artifactTypeOverride
 		}
+
 		thisDirectory, _ := filepath.Abs(".")
 		if !sourceArrayContains(sourceLibs, thisDirectory) {
 			sourceLibs = append(sourceLibs, thisDirectory)
 		}
-		operatingSystem := depsbuild.DetectOS()
 
+		operatingSystem := depsbuild.DetectOS()
 		if operatingSystem == depsbuild.MacOS || operatingSystem == depsbuild.Linux {
 			if artifactType == depslib.ConsoleApplication {
 				log.Info("adding console main")
-				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/posix/"))
-				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
-				//linkFlags = append(linkFlags, "-lSDL2")
-				//linkFlags = append(linkFlags, "-framework OpenGL")
 			} else {
 				log.Info("adding SDL main")
-				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "breathe/src/platform/sdl/"))
-				//sourceLibs = append(sourceLibs, filepath.Join(depsPath, "burst/src/platform/posix/"))
+				useSDL = true
 				linkFlags = append(linkFlags, "-lSDL2")
 				if operatingSystem == depsbuild.MacOS {
 					linkFlags = append(linkFlags, "-framework OpenGL")
@@ -185,6 +192,10 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 	includePaths = append(includePaths, filepath.Join(depsPath, "include"))
 	includePaths = append(includePaths, filepath.Join(info.PackageRootPath, "src/include"))
 
+	if useSDL {
+		includePaths = append(includePaths, "/usr/include/SDL2/")
+	}
+
 	var defines []string
 	defines = append(defines, "_POSIX_C_SOURCE=200112L")
 	defines = append(defines, "CONFIGURATION_DEBUG")
@@ -192,12 +203,14 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 
 	flags := []string{"-g", "-O0", "--std=c11",
 		"-Wall", "-Weverything",
-		"-Wno-disabled-macro-expansion", "-Wno-reserved-id-macro", "-Wno-documentation", "-Wno-comma", "-Wno-double-promotion", "-Wno-c++-compat", "-Wno-covered-switch-default",
+		"-Wno-disabled-macro-expansion", "-Wno-reserved-id-macro", "-Wno-documentation", "-Wno-comma",
+		"-Wno-double-promotion", "-Wno-c++-compat", "-Wno-covered-switch-default",
 		// "-pedantic", "-Werror",
 		"-Wno-sign-conversion", "-Wno-conversion", "-Wno-unused-parameter",
 		"-Wno-cast-align",
 		"-Wno-padded", "-Wno-cast-qual",
 		"-Wno-gnu-folding-constant", "-Wno-unused-macros"}
+
 	operatingSytem := depsbuild.DetectOS()
 	switch operatingSytem {
 	case depsbuild.MacOS:
@@ -205,5 +218,6 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 	default:
 		flags = append(flags, "-Wno-extra-semi-stmt")
 	}
+
 	return depsbuild.Build(flags, sourceLibs, includePaths, defines, linkFlags, log)
 }
