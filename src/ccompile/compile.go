@@ -102,25 +102,37 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 			sourceLibs = append(sourceLibs, allDirs...)
 		}
 
-		sdlSpecific := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl")
-		//nolint: nestif
-		if directoryExists(sdlSpecific) {
-			allDirs, recursiveErr := libRecursive(sdlSpecific)
-			if recursiveErr != nil {
-				return nil, recursiveErr
-			}
-
-			sourceLibs = append(sourceLibs, allDirs...)
-
-			sdlCommon := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl_common")
-			if directoryExists(sdlCommon) {
-				allDirs, recursiveErr := libRecursive(sdlCommon)
+		/*
+					sdlSpecific := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl")
+			//nolint: nestif
+			if directoryExists(sdlSpecific) {
+				allDirs, recursiveErr := libRecursive(sdlSpecific)
 				if recursiveErr != nil {
 					return nil, recursiveErr
 				}
 
 				sourceLibs = append(sourceLibs, allDirs...)
+
+				sdlCommon := filepath.Join(depsPath, node.ShortName(), "src/platform/sdl_common")
+				if directoryExists(sdlCommon) {
+					allDirs, recursiveErr := libRecursive(sdlCommon)
+					if recursiveErr != nil {
+						return nil, recursiveErr
+					}
+
+					sourceLibs = append(sourceLibs, allDirs...)
+				}*/
+
+		glfwSpecific := filepath.Join(depsPath, node.ShortName(), "src/platform/glfw")
+		log.Info("checking", clog.String("filepath", glfwSpecific))
+		//nolint: nestif
+		if directoryExists(glfwSpecific) {
+			allDirs, recursiveErr := libRecursive(glfwSpecific)
+			if recursiveErr != nil {
+				return nil, recursiveErr
 			}
+
+			sourceLibs = append(sourceLibs, allDirs...)
 		} else {
 			platformSpecific := findPlatformSpecific(depsPath, node)
 			if directoryExists(platformSpecific) {
@@ -141,6 +153,18 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 		}
 
 		sourceLibs = append(sourceLibs, allOwnSrcLib...)
+	}
+
+	glfwSpecific := filepath.Join(info.PackageRootPath, "src/platform/glfw")
+	log.Info("checking", clog.String("filepath", glfwSpecific))
+	//nolint: nestif
+	if directoryExists(glfwSpecific) {
+		allDirs, recursiveErr := libRecursive(glfwSpecific)
+		if recursiveErr != nil {
+			return nil, recursiveErr
+		}
+
+		sourceLibs = append(sourceLibs, allDirs...)
 	}
 
 	useSDL := false
@@ -169,9 +193,19 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 			if artifactType == depslib.ConsoleApplication {
 				log.Info("adding console main")
 			} else {
-				log.Info("adding SDL main")
+				/*
+					log.Info("adding SDL main")
+					useSDL = true
+					linkFlags = append(linkFlags, "-lSDL2")
+					if operatingSystem == depsbuild.MacOS {
+						linkFlags = append(linkFlags, "-framework OpenGL")
+					} else {
+						linkFlags = append(linkFlags, "-lGL")
+					}*/
+
+				log.Info("adding glfw main")
 				useSDL = true
-				linkFlags = append(linkFlags, "-lSDL2")
+				linkFlags = append(linkFlags, "-lglfw", "-lvulkan")
 				if operatingSystem == depsbuild.MacOS {
 					linkFlags = append(linkFlags, "-framework OpenGL")
 				} else {
@@ -209,6 +243,7 @@ func Build(info *depslib.DependencyInfo, artifactTypeOverride depslib.ArtifactTy
 		"-Wno-sign-conversion", "-Wno-conversion", "-Wno-unused-parameter",
 		"-Wno-cast-align",
 		"-Wno-padded", "-Wno-cast-qual",
+		"-Wno-documentation-unknown-command",
 		"-Wno-gnu-folding-constant", "-Wno-unused-macros"}
 
 	operatingSytem := depsbuild.DetectOS()
