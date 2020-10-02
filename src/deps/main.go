@@ -33,22 +33,26 @@ import (
 	"github.com/piot/log-go/src/clog"
 )
 
-var Version string
+var version string
 
+// SharedOptions are command line shared options.
 type SharedOptions struct {
 	Symlink  bool   `name:"symlink" short:"l"  help:"symlink using the parent directory instead of downloading"`
 	Artifact string `short:"a" optional:"" help:"override application type"`
 }
 
+// BuildCmd is the options for a build.
 type BuildCmd struct {
 	Shared SharedOptions `embed:""`
 }
 
+// RunCmd is the options for a run command.
 type RunCmd struct {
 	Shared  SharedOptions `embed:""`
-	RunArgs []string      `arg help:"run arguments"`
+	RunArgs []string      `arg:"" help:"run arguments"`
 }
 
+// Options are all the command line options.
 type Options struct {
 	Build   BuildCmd    `cmd:""`
 	Run     RunCmd      `cmd:""`
@@ -64,30 +68,36 @@ func stringToArtifactType(appType string) depslib.ArtifactType {
 	case "library":
 		return depslib.Library
 	}
+
 	return depslib.Inherit
 }
 
 func sharedOptionsToGeneralOptions(shared SharedOptions) command.Options {
 	generalOptions := command.Options{UseSymlink: shared.Symlink, Artifact: stringToArtifactType(shared.Artifact)}
+
 	return generalOptions
 }
 
+// Run is called if a run command was issued.
 func (o *RunCmd) Run(log *clog.Log) error {
 	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".", log)
 	if foundErr != nil {
 		return foundErr
 	}
+
 	return command.Run(foundConfs, sharedOptionsToGeneralOptions(o.Shared), o.RunArgs, log)
 }
 
+// Run is called if a build command was issued.
 func (o *BuildCmd) Run(log *clog.Log) error {
 	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".", log)
 	if foundErr != nil {
 		return foundErr
 	}
+
 	return command.Build(foundConfs, sharedOptionsToGeneralOptions(o.Shared), log)
 }
 
 func main() {
-	cli.Run(&Options{}, cli.RunOptions{Version: Version, ApplicationType: cli.Utility})
+	cli.Run(&Options{}, cli.RunOptions{Version: version, ApplicationType: cli.Utility})
 }
