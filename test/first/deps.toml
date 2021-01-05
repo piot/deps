@@ -1,0 +1,12 @@
+depsversion = "0.0.0"
+
+name = "piot/lightning"
+version = "0.0.0"
+
+[[dependencies]]
+name = 'piot/thunder'
+version = "*"
+
+[[dependencies]]
+name = 'piot/tiny-clib'
+version = "*"
