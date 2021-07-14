@@ -39,6 +39,9 @@ func RepoNameToShortName(repo string) string {
 	if len(projectNames) != 2 {
 		panic("wrong project name:" + repo)
 	}
+	if projectNames[0] != "piot" {
+		return repo
+	}
 	return projectNames[1]
 }
 
@@ -68,6 +71,7 @@ func ReadConfigFromFilename(filename string) (*Config, error) {
 }
 
 func ReadConfigFromDirectory(directory string) (*Config, error) {
+	fmt.Printf("reading config from '%s'\n", directory)
 	info, statErr := os.Stat(directory)
 	if statErr != nil {
 		return nil, statErr

@@ -82,14 +82,16 @@ func wgetRepo(rootPath string, depsPath string, repoName string) error {
 	return symlinkSrcInclude(targetDirectory, depsPath, shortName)
 }
 
-func gitClone(depsPath string, repoName string) error {
+func gitClone(depsPath string, repoName string, shortName string) error {
 	downloadURLString := fmt.Sprintf("https://github.com/%v.git", repoName)
 	downloadURL, parseErr := url.Parse(downloadURLString)
 	if parseErr != nil {
 		return parseErr
 	}
 
-	cmd := exec.Command("git", "clone", downloadURL.String())
+	fmt.Printf("git clone from '%v' to %v\n", downloadURL, shortName)
+
+	cmd := exec.Command("git", "clone", downloadURL.String(), shortName)
 
 	cmd.Dir = depsPath
 
@@ -101,6 +103,7 @@ func gitClone(depsPath string, repoName string) error {
 }
 
 func gitPull(targetDirectory string, repoName string) error {
+	fmt.Printf("git pull %v %v\n", repoName, targetDirectory)
 	cmd := exec.Command("git", "pull")
 
 	cmd.Dir = targetDirectory
@@ -118,22 +121,26 @@ func directoryExists(directory string) bool {
 	return checkDirectoryErr == nil && stat.IsDir()
 }
 
-func cloneOrPullRepo(targetDirectory string, depsPath string, repoName string) error {
-	if directoryExists(targetDirectory) {
+func cloneOrPullRepo(targetDirectory string, depsPath string, repoName string, shortName string) error {
+	checkDirectory := path.Join(targetDirectory, ".git")
+	if directoryExists(checkDirectory) {
 		return gitPull(targetDirectory, repoName)
 	}
-	return gitClone(depsPath, repoName)
+	return gitClone(depsPath, repoName, shortName)
 
 }
 
 func copyDependency(rootPath string, depsPath string, repoName string, mode Mode) error {
 	shortName := RepoNameToShortName(repoName)
 	targetDirectory := path.Join(depsPath, shortName)
+	fmt.Printf("copy from '%v' to '%v'\n", shortName, targetDirectory)
+
+	os.MkdirAll(targetDirectory, os.ModePerm)
 	switch mode {
 	case Symlink:
 		return symlinkRepo(rootPath, depsPath, repoName)
 	case Clone:
-		return cloneOrPullRepo(targetDirectory, depsPath, repoName)
+		return cloneOrPullRepo(targetDirectory, depsPath, repoName, shortName)
 	case Wget:
 		return wgetRepo(rootPath, depsPath, repoName)
 	default:
