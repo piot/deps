@@ -37,7 +37,7 @@ func symlinkSrcInclude(packageDir string, depsPath string, shortName string) err
 	includeShortName := HackRemoveCShortName(shortName)
 	sourceInclude := path.Join(packageDir, "src", "include", includeShortName)
 	targetInclude := path.Join(depsPath, "include", includeShortName)
-	includeErr := MakeRelativeSymlink(sourceInclude, targetInclude)
+	includeErr := MakeRelativeSymlink(sourceInclude, targetInclude, packageDir)
 	return includeErr
 }
 
@@ -45,15 +45,17 @@ func symlinkRepo(rootPath string, depsPath string, repoName string) error {
 	shortName := RepoNameToShortName(repoName)
 	packageDir := path.Join(rootPath, shortName+"/")
 	targetName := path.Join(depsPath, shortName)
-	makeErr := MakeRelativeSymlink(packageDir, targetName)
+	fmt.Printf("symlink '%v' to '%v'\n", packageDir, targetName)
+	makeErr := MakeSymlink(packageDir, targetName)
 	if makeErr != nil {
 		return makeErr
 	}
-	return symlinkSrcInclude(packageDir, depsPath, shortName)
+	return nil
+	//return symlinkSrcInclude(packageDir, depsPath, shortName)
 }
 
 func wgetRepo(rootPath string, depsPath string, repoName string) error {
-	downloadURLString := fmt.Sprintf("https://github.com/%v/archive/master.zip", repoName)
+	downloadURLString := fmt.Sprintf("https://%vgithub.com/%v/archive/master.zip", gitRepoPrefix(), repoName)
 	downloadURL, parseErr := url.Parse(downloadURLString)
 	if parseErr != nil {
 		return parseErr
@@ -83,7 +85,7 @@ func wgetRepo(rootPath string, depsPath string, repoName string) error {
 }
 
 func gitClone(depsPath string, repoName string, shortName string) error {
-	downloadURLString := fmt.Sprintf("https://github.com/%v.git", repoName)
+	downloadURLString := fmt.Sprintf("https://%vgithub.com/%v.git", gitRepoPrefix(), repoName)
 	downloadURL, parseErr := url.Parse(downloadURLString)
 	if parseErr != nil {
 		return parseErr
@@ -113,6 +115,17 @@ func gitPull(targetDirectory string, repoName string) error {
 	cmd.Wait()
 
 	return nil
+}
+
+func gitRepoPrefix() string {
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return ""
+	}
+
+	fmt.Printf("found secret GITHUB_TOKEN\n")
+
+	return fmt.Sprintf("%v@", token)
 }
 
 func directoryExists(directory string) bool {

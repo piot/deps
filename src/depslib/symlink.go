@@ -8,6 +8,8 @@ package depslib
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 )
 
@@ -44,23 +46,37 @@ func CreateDirectoryIfNeeded(directory string) error {
 }
 
 func MakeSymlink(existingFilename string, symlinkFilename string) error {
-	removeSymlinkErr := removeSymlinkIfExists(symlinkFilename)
-	if removeSymlinkErr != nil {
-		return removeSymlinkErr
-	}
+	/*
+		removeSymlinkErr := removeSymlinkIfExists(symlinkFilename)
+		if removeSymlinkErr != nil {
+			fmt.Printf("couldn't remove symlink\n")
+			return removeSymlinkErr
+		}
 
-	createDirectoryErr := CreateDirectoryIfNeeded(filepath.Dir(symlinkFilename))
-	if createDirectoryErr != nil {
-		return createDirectoryErr
-	}
+		createDirectoryErr := CreateDirectoryIfNeeded(filepath.Dir(symlinkFilename))
+		if createDirectoryErr != nil {
+			fmt.Printf("directory existed\n")
+			return createDirectoryErr
+		}
+	*/
 
-	return os.Symlink(existingFilename, symlinkFilename)
+	cmd := exec.Command("ln", "-s", existingFilename, symlinkFilename)
+
+	//cmd.Dir = depsPath
+
+	cmd.Start()
+
+	cmd.Wait()
+
+	return nil // os.Symlink(existingFilename, symlinkFilename)
 }
 
-func MakeRelativeSymlink(existingFilename string, symlinkFilename string) error {
-	relativePath, err := filepath.Rel(filepath.Dir(symlinkFilename), existingFilename)
+func MakeRelativeSymlink(existingFilename string, symlinkFilename string, rootDirectory string) error {
+	relativePath, err := filepath.Rel(path.Dir(symlinkFilename), existingFilename)
 	if err != nil {
 		return fmt.Errorf("not a relative path %v %v %v", existingFilename, symlinkFilename, err)
 	}
+	fmt.Printf("relative symlink '%v' to '%v'\n", relativePath, symlinkFilename)
+
 	return MakeSymlink(relativePath, symlinkFilename)
 }
