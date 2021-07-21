@@ -7,6 +7,7 @@ package depslib
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -20,12 +21,16 @@ func TempDirectory(tempSuffix string) (string, error) {
 }
 
 func BackupDeps(depsPath string) error {
+	log.Println("force clean deps")
 	_, statErr := os.Stat(depsPath)
 	if statErr == nil {
 		_, cleanErr := CleanDirectoryWithBackup(depsPath, "deps.clean")
 		if cleanErr != nil {
 			return cleanErr
 		}
+	} else {
+		log.Printf("deps path do not exists %v\n", depsPath)
+		return nil
 	}
 
 	return nil
@@ -33,7 +38,7 @@ func BackupDeps(depsPath string) error {
 
 func CleanDirectory(directory string) error {
 	os.RemoveAll(directory)
-	mkdirErr := os.MkdirAll(directory, os.ModePerm)
+	mkdirErr := os.MkdirAll(directory, 0755)
 	return mkdirErr
 }
 
@@ -69,6 +74,7 @@ func CleanDirectoryWithBackup(directory string, tempSuffix string) (string, erro
 	}
 	existingDir := !isPathError && stat.IsDir()
 	if existingDir {
+		log.Println("trying to clean")
 		backupDir, tempErr := CleanTempDirectoryEx(filepath.Dir(directory), tempSuffix)
 		if tempErr != nil {
 			return "", tempErr
@@ -81,5 +87,6 @@ func CleanDirectoryWithBackup(directory string, tempSuffix string) (string, erro
 		}
 		return backupDir, nil
 	}
-	return "", os.MkdirAll(directory, os.ModePerm)
+	log.Println("mkdir all")
+	return "", os.MkdirAll(directory, 0755)
 }

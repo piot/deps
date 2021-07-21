@@ -7,9 +7,9 @@ package depslib
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 )
 
@@ -40,43 +40,43 @@ func removeSymlinkIfExists(filename string) error {
 func CreateDirectoryIfNeeded(directory string) error {
 	stat, checkDirectoryErr := os.Lstat(directory)
 	if checkDirectoryErr != nil || !stat.IsDir() {
-		return os.MkdirAll(directory, os.ModePerm)
+		return os.MkdirAll(directory, 0755)
 	}
 	return nil
 }
 
-func MakeSymlink(existingFilename string, symlinkFilename string) error {
-	/*
-		removeSymlinkErr := removeSymlinkIfExists(symlinkFilename)
+func MakeSymlink(existingDirectory string, targetDirectory string) error {
+		removeSymlinkErr := removeSymlinkIfExists(targetDirectory)
 		if removeSymlinkErr != nil {
 			fmt.Printf("couldn't remove symlink\n")
 			return removeSymlinkErr
 		}
 
-		createDirectoryErr := CreateDirectoryIfNeeded(filepath.Dir(symlinkFilename))
+		createDirectoryErr := CreateDirectoryIfNeeded(filepath.Dir(targetDirectory))
 		if createDirectoryErr != nil {
 			fmt.Printf("directory existed\n")
 			return createDirectoryErr
 		}
-	*/
 
-	cmd := exec.Command("ln", "-s", existingFilename, symlinkFilename)
 
-	//cmd.Dir = depsPath
+	log.Printf("symlinking %v to %v\n", existingDirectory, targetDirectory)
+
+	cmd := exec.Command("ln", "-s", "-r", existingDirectory, targetDirectory)
+
+	//cmd.Dir = parentTargetDirectory
 
 	cmd.Start()
 
 	cmd.Wait()
 
-	return nil // os.Symlink(existingFilename, symlinkFilename)
-}
-
-func MakeRelativeSymlink(existingFilename string, symlinkFilename string, rootDirectory string) error {
-	relativePath, err := filepath.Rel(path.Dir(symlinkFilename), existingFilename)
+	/*
+	err := os.Symlink(existingDirectory, targetDirectory)
 	if err != nil {
-		return fmt.Errorf("not a relative path %v %v %v", existingFilename, symlinkFilename, err)
+		log.Printf("got error from OS:%v\n", err)
 	}
-	fmt.Printf("relative symlink '%v' to '%v'\n", relativePath, symlinkFilename)
+	*/
 
-	return MakeSymlink(relativePath, symlinkFilename)
+	return nil
 }
+
+

@@ -33,20 +33,16 @@ func HackRemoveCShortName(shortname string) string {
 	return shortname
 }
 
-func symlinkSrcInclude(packageDir string, depsPath string, shortName string) error {
-	includeShortName := HackRemoveCShortName(shortName)
-	sourceInclude := path.Join(packageDir, "src", "include", includeShortName)
-	targetInclude := path.Join(depsPath, "include", includeShortName)
-	includeErr := MakeRelativeSymlink(sourceInclude, targetInclude, packageDir)
-	return includeErr
-}
-
 func symlinkRepo(rootPath string, depsPath string, repoName string) error {
 	shortName := RepoNameToShortName(repoName)
 	packageDir := path.Join(rootPath, shortName+"/")
-	targetName := path.Join(depsPath, shortName)
-	fmt.Printf("symlink '%v' to '%v'\n", packageDir, targetName)
-	makeErr := MakeSymlink(packageDir, targetName)
+	targetNameInDeps := path.Join(depsPath, shortName)
+	_, statErr := os.Stat(targetNameInDeps)
+	if statErr == nil {
+		return fmt.Errorf("there is already something at target '%v', can not create link", targetNameInDeps)
+	}
+	fmt.Printf("symlink '%v' to '%v'\n", packageDir, targetNameInDeps)
+	makeErr := MakeSymlink(packageDir, targetNameInDeps)
 	if makeErr != nil {
 		return makeErr
 	}
@@ -81,7 +77,7 @@ func wgetRepo(rootPath string, depsPath string, repoName string) error {
 	if unzipErr != nil {
 		return unzipErr
 	}
-	return symlinkSrcInclude(targetDirectory, depsPath, shortName)
+	return nil
 }
 
 func gitClone(depsPath string, repoName string, shortName string) error {
@@ -148,7 +144,9 @@ func copyDependency(rootPath string, depsPath string, repoName string, mode Mode
 	targetDirectory := path.Join(depsPath, shortName)
 	fmt.Printf("copy from '%v' to '%v'\n", shortName, targetDirectory)
 
-	os.MkdirAll(targetDirectory, os.ModePerm)
+	if mode != Symlink {
+		os.MkdirAll(targetDirectory, 0755)
+	}
 	switch mode {
 	case Symlink:
 		return symlinkRepo(rootPath, depsPath, repoName)
@@ -330,9 +328,11 @@ func SetupDependencies(filename string, mode Mode, forceClean bool) (*Dependency
 	rootPath := path.Dir(packageRootPath)
 	depsPath := filepath.Join(packageRootPath, "deps/")
 	if mode != Clone || forceClean {
-		BackupDeps(depsPath)
+		if err := BackupDeps(depsPath); err != nil {
+			return nil, err
+		}
 	}
-	os.Mkdir(depsPath, 0700)
+	os.Mkdir(depsPath, 0755)
 
 	cache, rootNode, rootNodeErr := calculateTotalDependencies(rootPath, depsPath, conf, mode)
 	if rootNodeErr != nil {
