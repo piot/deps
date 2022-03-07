@@ -26,13 +26,6 @@ const (
 	Symlink
 )
 
-func HackRemoveCShortName(shortname string) string {
-	if strings.HasSuffix(shortname, "-c") {
-		return shortname[:len(shortname)-2]
-	}
-	return shortname
-}
-
 func symlinkRepo(rootPath string, depsPath string, repoName string) error {
 	shortName := RepoNameToShortName(repoName)
 	packageDir := path.Join(rootPath, shortName+"/")
@@ -146,6 +139,8 @@ func copyDependency(rootPath string, depsPath string, repoName string, mode Mode
 
 	if mode != Symlink {
 		os.MkdirAll(targetDirectory, 0755)
+	} else {
+		os.MkdirAll(path.Dir(targetDirectory), 0755)
 	}
 	switch mode {
 	case Symlink:
@@ -299,7 +294,7 @@ func convertFromConfigNode(rootPath string, depsPath string, conf *Config, cache
 		}
 		node.AddDependency(foundNode)
 	}
-	const useDevelopmentDependencies = true
+	const useDevelopmentDependencies = false
 	if useDevelopmentDependencies {
 		for _, dep := range conf.Development {
 			_, handleErr := handleNode(rootPath, depsPath, node, cache, dep.Name, mode)
@@ -325,7 +320,7 @@ func SetupDependencies(filename string, mode Mode, forceClean bool) (*Dependency
 		return nil, confErr
 	}
 	packageRootPath := path.Dir(filename)
-	rootPath := path.Dir(packageRootPath)
+	rootPath := path.Dir(path.Dir(packageRootPath))
 	depsPath := filepath.Join(packageRootPath, "deps/")
 	if mode != Clone || forceClean {
 		if err := BackupDeps(depsPath); err != nil {

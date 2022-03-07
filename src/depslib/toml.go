@@ -39,10 +39,8 @@ func RepoNameToShortName(repo string) string {
 	if len(projectNames) != 2 {
 		panic("wrong project name:" + repo)
 	}
-	if projectNames[0] != "piot" {
-		return repo
-	}
-	return projectNames[1]
+
+	return repo
 }
 
 func ReadFromReader(reader io.Reader) (*Config, error) {
