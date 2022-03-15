@@ -366,10 +366,12 @@ func SetupDependencies(filename string, mode Mode, forceClean bool) (*Dependency
 		rootNodes = append(rootNodes, node)
 	}
 
-	for _, localNode := range rootNode.dependencies {
-		allDependencies := whoDependsOnThisExcept(rootNode.dependencies, localNode)
-		if len(allDependencies) > 0 {
-			log.Printf("redundant: '%v' included '%v', but it is already required by '%v'", rootNode, localNode, allDependencies)
+	for _, nodeToCheck := range cache.nodes {
+		for _, localNode := range nodeToCheck.dependencies {
+			allDependencies := whoDependsOnThisExcept(nodeToCheck.dependencies, localNode)
+			if len(allDependencies) > 0 {
+				log.Printf("redundant: '%v' included '%v', but it is already required by '%v'", nodeToCheck, localNode, allDependencies)
+			}
 		}
 	}
 
