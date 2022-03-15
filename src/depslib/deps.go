@@ -8,6 +8,7 @@ package depslib
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/url"
 	"os"
 	"os/exec"
@@ -257,6 +258,8 @@ func handleNode(rootPath string, depsPath string, node *DependencyNode, cache *C
 		if convertErr != nil {
 			return nil, convertErr
 		}
+	} else {
+
 	}
 	return foundNode, nil
 }
@@ -314,6 +317,28 @@ func calculateTotalDependencies(rootPath string, depsPath string, conf *Config, 
 	return cache, rootNode, rootNodeErr
 }
 
+func isInList(dependencies []*DependencyNode, dependencyToCheck *DependencyNode) bool {
+	for _, x := range dependencies {
+		if x == dependencyToCheck {
+			return true
+		}
+	}
+
+	return false
+}
+
+func whoDependsOnThisExcept(dependencies []*DependencyNode, dependencyToCheck *DependencyNode) []*DependencyNode {
+	var foundDependencies []*DependencyNode
+
+	for _, x := range dependencies {
+		if isInList(x.dependencies, dependencyToCheck) {
+			foundDependencies = append(foundDependencies, x)
+		}
+	}
+
+	return foundDependencies
+}
+
 func SetupDependencies(filename string, mode Mode, forceClean bool) (*DependencyInfo, error) {
 	conf, confErr := ReadConfigFromFilename(filename)
 	if confErr != nil {
@@ -339,6 +364,13 @@ func SetupDependencies(filename string, mode Mode, forceClean bool) (*Dependency
 			continue
 		}
 		rootNodes = append(rootNodes, node)
+	}
+
+	for _, localNode := range rootNode.dependencies {
+		allDependencies := whoDependsOnThisExcept(rootNode.dependencies, localNode)
+		if len(allDependencies) > 0 {
+			log.Printf("redundant: '%v' included '%v', but it is already required by '%v'", rootNode, localNode, allDependencies)
+		}
 	}
 
 	//rootNode.Print(0)
