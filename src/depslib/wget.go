@@ -21,6 +21,7 @@ func HTTPGet(downloadURL *url.URL) (content io.Reader, err error) {
 	}
 	timeout := time.Second * 10
 	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
+	defer cancelFunc()
 	request = request.WithContext(ctx)
 
 	response, err := http.DefaultClient.Do(request)
@@ -29,7 +30,6 @@ func HTTPGet(downloadURL *url.URL) (content io.Reader, err error) {
 	}
 
 	if response.StatusCode != 200 {
-		cancelFunc()
 		return nil, fmt.Errorf("INVALID RESPONSE; status: %s", response.Status)
 	}
 

@@ -12,13 +12,15 @@ import (
 )
 
 type Options struct {
-	Mode       depslib.Mode
-	ForceClean bool
-	Artifact   depslib.ArtifactType
+	Mode                       depslib.Mode
+	ForceClean                 bool
+	UseDevelopmentDependencies bool
+	Artifact                   depslib.ArtifactType
+	LocalPackageRoot           string
 }
 
 func setupDependencies(foundConfs []string, options Options) (*depslib.DependencyInfo, error) {
-	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], options.Mode, options.ForceClean)
+	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], options.Mode, options.ForceClean, options.UseDevelopmentDependencies, options.LocalPackageRoot)
 	return dependencyInfo, err
 }
 
