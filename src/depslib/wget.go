@@ -18,14 +18,13 @@ func HTTPGet(downloadURL *url.URL, targetFile string) (err error) {
 	if err != nil {
 		return
 	}
-	log.Printf("downloading %v", downloadURL)
+
 	defer resp.Body.Close()
 
 	out, createErr := os.Create(targetFile)
 	if createErr != nil {
 		return createErr
 	}
-	log.Printf("targetFile %v", targetFile)
 
 	defer out.Close()
 

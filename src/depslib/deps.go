@@ -60,7 +60,7 @@ func wgetRepo(rootPath string, depsPath string, repoName string) error {
 	lastName := strings.Split(shortName, "/")[1]
 	targetDirectory := path.Join(depsPath, shortName)
 	zipPrefix := fmt.Sprintf("%v-main/", lastName)
-	log.Printf("unzipping %v", zipPrefix)
+
 	unzipErr := unzipFile("temp.zip", targetDirectory, zipPrefix)
 	if unzipErr != nil {
 		log.Printf("unzipErr:%v", unzipErr)
