@@ -42,7 +42,11 @@ func find(startPath string) ([]string, error) {
 		if directory == "." || directory == "/" {
 			return foundRoots, nil
 		}
-		directory = filepath.Dir(directory)
+		next := filepath.Dir(directory)
+		if next == directory {
+			return foundRoots, nil
+		}
+		directory = next
 	}
 
 }

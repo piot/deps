@@ -6,32 +6,33 @@
 package depslib
 
 import (
-	"context"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
-	"time"
+	"os"
 )
 
-func HTTPGet(downloadURL *url.URL) (content io.Reader, err error) {
-	request, err := http.NewRequest("GET", downloadURL.String(), nil)
+func HTTPGet(downloadURL *url.URL, targetFile string) (err error) {
+	resp, err := http.Get(downloadURL.String())
 	if err != nil {
 		return
 	}
-	timeout := time.Second * 10
-	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
-	defer cancelFunc()
-	request = request.WithContext(ctx)
+	log.Printf("downloading %v", downloadURL)
+	defer resp.Body.Close()
 
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return nil, err
+	out, createErr := os.Create(targetFile)
+	if createErr != nil {
+		return createErr
+	}
+	log.Printf("targetFile %v", targetFile)
+
+	defer out.Close()
+
+	_, copyErr := io.Copy(out, resp.Body)
+	if copyErr != nil {
+		log.Printf("couldnt copy %v", copyErr)
 	}
 
-	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("INVALID RESPONSE; status: %s", response.Status)
-	}
-
-	return response.Body, nil
+	return copyErr
 }

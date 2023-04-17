@@ -7,7 +7,6 @@ package depslib
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/url"
 	"os"
@@ -45,30 +44,26 @@ func symlinkRepo(rootPath string, depsPath string, repoName string) error {
 }
 
 func wgetRepo(rootPath string, depsPath string, repoName string) error {
-	downloadURLString := fmt.Sprintf("https://%vgithub.com/%v/archive/master.zip", gitRepoPrefix(), repoName)
+	downloadURLString := fmt.Sprintf("https://%vgithub.com/%v/archive/main.zip", gitRepoPrefix(), repoName)
+	fmt.Printf("downloading from '%v'\n", downloadURLString)
 	downloadURL, parseErr := url.Parse(downloadURLString)
 	if parseErr != nil {
 		return parseErr
 	}
-	contentReader, downloadErr := HTTPGet(downloadURL)
+
+	downloadErr := HTTPGet(downloadURL, "temp.zip")
 	if downloadErr != nil {
 		return downloadErr
 	}
-	targetFile, createErr := os.Create("temp.zip")
-	if createErr != nil {
-		return createErr
-	}
-	_, copyErr := io.Copy(targetFile, contentReader)
-	if copyErr != nil {
-		return copyErr
-	}
-	contentReader.(io.Closer).Close()
-	targetFile.Close()
+
 	shortName := RepoNameToShortName(repoName)
+	lastName := strings.Split(shortName, "/")[1]
 	targetDirectory := path.Join(depsPath, shortName)
-	zipPrefix := fmt.Sprintf("%v-master/", shortName)
+	zipPrefix := fmt.Sprintf("%v-main/", lastName)
+	log.Printf("unzipping %v", zipPrefix)
 	unzipErr := unzipFile("temp.zip", targetDirectory, zipPrefix)
 	if unzipErr != nil {
+		log.Printf("unzipErr:%v", unzipErr)
 		return unzipErr
 	}
 	return nil
