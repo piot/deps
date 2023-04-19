@@ -23,6 +23,7 @@ type SharedOptions struct {
 	LocalPackageRoot           string `name:"localPackageRoot" short:"r" default:"" type:"path" help:"root directory of local packages"`
 	UseDevelopmentDependencies bool   `name:"dev" default:"false" help:"include the development dependencies"`
 	Artifact                   string `short:"a" optional:"" help:"override application type"`
+	MoveInclude                bool   `name:"move-include" default:"false" help:"move include files"`
 }
 
 // BuildCmd is the options for a build.
@@ -72,7 +73,7 @@ func sharedOptionsToGeneralOptions(shared SharedOptions) command.Options {
 		mode = depslib.Clone
 	}
 
-	generalOptions := command.Options{Mode: mode, ForceClean: shared.ForceClean, UseDevelopmentDependencies: shared.UseDevelopmentDependencies, LocalPackageRoot: shared.LocalPackageRoot, Artifact: stringToArtifactType(shared.Artifact)}
+	generalOptions := command.Options{Mode: mode, ForceClean: shared.ForceClean, UseDevelopmentDependencies: shared.UseDevelopmentDependencies, LocalPackageRoot: shared.LocalPackageRoot, Artifact: stringToArtifactType(shared.Artifact), MoveInclude: shared.MoveInclude}
 
 	return generalOptions
 }

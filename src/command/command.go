@@ -17,10 +17,11 @@ type Options struct {
 	UseDevelopmentDependencies bool
 	Artifact                   depslib.ArtifactType
 	LocalPackageRoot           string
+	MoveInclude                bool
 }
 
 func setupDependencies(foundConfs []string, options Options) (*depslib.DependencyInfo, error) {
-	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], options.Mode, options.ForceClean, options.UseDevelopmentDependencies, options.LocalPackageRoot)
+	dependencyInfo, err := depslib.SetupDependencies(foundConfs[0], options.Mode, options.ForceClean, options.UseDevelopmentDependencies, options.LocalPackageRoot, options.MoveInclude)
 	return dependencyInfo, err
 }
 
