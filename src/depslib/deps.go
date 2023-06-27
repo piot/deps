@@ -350,7 +350,7 @@ func whoDependsOnThisExcept(dependencies []*DependencyNode, dependencyToCheck *D
 	return foundDependencies
 }
 
-func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopmentDependencies bool, localPackageRoot string, moveInclude bool) (*DependencyInfo, error) {
+func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopmentDependencies bool, localPackageRoot string, depsTargetPathOverride string, moveInclude bool) (*DependencyInfo, error) {
 	conf, confErr := ReadConfigFromFilename(filename)
 	if confErr != nil {
 		return nil, confErr
@@ -362,7 +362,11 @@ func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopme
 		packageRootPath = localPackageRoot
 	}
 	rootPath := path.Dir(path.Dir(packageRootPath))
+
 	depsPath := filepath.Join(path.Dir(filename), "deps/")
+	if depsTargetPathOverride != "" {
+		depsPath = depsTargetPathOverride
+	}
 
 	if mode != Clone || forceClean {
 		if err := BackupDeps(depsPath); err != nil {

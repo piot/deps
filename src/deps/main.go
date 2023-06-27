@@ -21,6 +21,7 @@ type SharedOptions struct {
 	Mode                       string `name:"mode" short:"m" enum:"wget,symlink,clone" default:"wget" help:"How the dependencies are realized: wget, symlink or clone"`
 	ForceClean                 bool   `name:"clean" default:"false" help:"delete the deps directory"`
 	LocalPackageRoot           string `name:"localPackageRoot" short:"r" default:"" type:"path" help:"root directory of local packages"`
+	TargetDepsPath             string `name:"targetDepsPath" short:"t" default:"" type:"path" help:"deps/ target directory"`
 	UseDevelopmentDependencies bool   `name:"dev" default:"false" help:"include the development dependencies"`
 	Artifact                   string `short:"a" optional:"" help:"override application type"`
 	MoveInclude                bool   `name:"move-include" default:"false" help:"move include files"`
@@ -73,7 +74,7 @@ func sharedOptionsToGeneralOptions(shared SharedOptions) command.Options {
 		mode = depslib.Clone
 	}
 
-	generalOptions := command.Options{Mode: mode, ForceClean: shared.ForceClean, UseDevelopmentDependencies: shared.UseDevelopmentDependencies, LocalPackageRoot: shared.LocalPackageRoot, Artifact: stringToArtifactType(shared.Artifact), MoveInclude: shared.MoveInclude}
+	generalOptions := command.Options{Mode: mode, ForceClean: shared.ForceClean, UseDevelopmentDependencies: shared.UseDevelopmentDependencies, LocalPackageRoot: shared.LocalPackageRoot, TargetDepsPath: shared.TargetDepsPath, Artifact: stringToArtifactType(shared.Artifact), MoveInclude: shared.MoveInclude}
 
 	return generalOptions
 }
