@@ -24,6 +24,7 @@ const (
 	Wget Mode = iota
 	Clone
 	Symlink
+	ReadLocal
 )
 
 func symlinkRepo(rootPath string, depsPath string, repoName string) error {
@@ -150,15 +151,29 @@ func copyDependency(rootPath string, depsPath string, repoName string, mode Mode
 	}
 }
 
+func copyOrGetConfigDirectory(rootPath string, depsPath string, repoName string, mode Mode) (string, error) {
+	switch mode {
+	case ReadLocal:
+		shortName := RepoNameToShortName(repoName)
+		packageDir := path.Join(rootPath, shortName+"/")
+		return packageDir, nil
+	default:
+		directoryName := RepoNameToShortName(repoName)
+		packageDirectory := path.Join(depsPath, directoryName)
+		if err := copyDependency(rootPath, depsPath, repoName, mode); err != nil {
+			return "", err
+		}
+		return packageDirectory, nil
+	}
+}
+
 func establishPackageAndReadConfig(rootPath string, depsPath string, packageName string, mode Mode) (*Config, error) {
-	copyErr := copyDependency(rootPath, depsPath, packageName, mode)
+	configDirectory, copyErr := copyOrGetConfigDirectory(rootPath, depsPath, packageName, mode)
 	if copyErr != nil {
 		return nil, copyErr
 	}
 
-	directoryName := RepoNameToShortName(packageName)
-	packageDirectory := path.Join(depsPath, directoryName)
-	conf, confErr := ReadConfigFromDirectory(packageDirectory)
+	conf, confErr := ReadConfigFromDirectory(configDirectory)
 	if confErr != nil {
 		return nil, confErr
 	}
@@ -227,21 +242,21 @@ type DependencyInfo struct {
 }
 
 type Cache struct {
-	nodes map[string]*DependencyNode
+	Nodes map[string]*DependencyNode
 }
 
 func NewCache() *Cache {
-	return &Cache{nodes: make(map[string]*DependencyNode)}
+	return &Cache{Nodes: make(map[string]*DependencyNode)}
 }
 
 func (c *Cache) FindNode(name string) *DependencyNode {
-	return c.nodes[name]
+	return c.Nodes[name]
 }
 func (c *Cache) AddNode(name string, node *DependencyNode) {
-	c.nodes[name] = node
+	c.Nodes[name] = node
 }
 
-func handleNode(rootPath string, depsPath string, node *DependencyNode, cache *Cache, depName string, mode Mode, useDevelopmentDependencies bool, moveInclude bool) (*DependencyNode, error) {
+func handleNode(rootPath string, depsPath string, node *DependencyNode, cache *Cache, depName string, mode Mode, useDevelopmentDependencies bool) (*DependencyNode, error) {
 	foundNode := cache.FindNode(depName)
 	if foundNode == nil {
 		depConf, confErr := establishPackageAndReadConfig(rootPath, depsPath, depName, mode)
@@ -249,24 +264,8 @@ func handleNode(rootPath string, depsPath string, node *DependencyNode, cache *C
 			return nil, confErr
 		}
 
-		if moveInclude {
-			targetInclude := path.Join(depsPath, "include")
-			os.Mkdir(targetInclude, 0755)
-
-			sourceInclude := path.Join(depsPath, depName, "src", "include")
-			log.Printf("move include from %v to %v", sourceInclude, targetInclude)
-			fileInfos, err := os.ReadDir(sourceInclude)
-			if err == nil {
-				for _, subDir := range fileInfos {
-					sourceIncludeSubDir := path.Join(sourceInclude, subDir.Name())
-					destinationIncludeSubDir := path.Join(targetInclude, subDir.Name())
-					os.Rename(sourceIncludeSubDir, destinationIncludeSubDir)
-				}
-				os.Remove(sourceInclude)
-			}
-		}
 		var convertErr error
-		foundNode, convertErr = convertFromConfigNode(rootPath, depsPath, depConf, cache, mode, useDevelopmentDependencies, moveInclude)
+		foundNode, convertErr = convertFromConfigNode(rootPath, depsPath, depConf, cache, mode, useDevelopmentDependencies)
 		if convertErr != nil {
 			return nil, convertErr
 		}
@@ -298,12 +297,12 @@ func ToArtifactType(v string) ArtifactType {
 	return Library
 }
 
-func convertFromConfigNode(rootPath string, depsPath string, conf *Config, cache *Cache, mode Mode, useDevelopmentDependencies bool, moveInclude bool) (*DependencyNode, error) {
+func convertFromConfigNode(rootPath string, depsPath string, conf *Config, cache *Cache, mode Mode, useDevelopmentDependencies bool) (*DependencyNode, error) {
 	artifactType := ToArtifactType(conf.ArtifactType)
 	node := &DependencyNode{name: conf.Name, version: semver.MustParse(conf.Version), artifactType: artifactType}
 	cache.AddNode(conf.Name, node)
 	for _, dep := range conf.Dependencies {
-		foundNode, handleErr := handleNode(rootPath, depsPath, node, cache, dep.Name, mode, useDevelopmentDependencies, moveInclude)
+		foundNode, handleErr := handleNode(rootPath, depsPath, node, cache, dep.Name, mode, useDevelopmentDependencies)
 		if handleErr != nil {
 			return nil, handleErr
 		}
@@ -311,7 +310,7 @@ func convertFromConfigNode(rootPath string, depsPath string, conf *Config, cache
 	}
 	if useDevelopmentDependencies {
 		for _, dep := range conf.Development {
-			_, handleErr := handleNode(rootPath, depsPath, node, cache, dep.Name, mode, useDevelopmentDependencies, moveInclude)
+			_, handleErr := handleNode(rootPath, depsPath, node, cache, dep.Name, mode, useDevelopmentDependencies)
 			if handleErr != nil {
 				return nil, handleErr
 			}
@@ -322,9 +321,9 @@ func convertFromConfigNode(rootPath string, depsPath string, conf *Config, cache
 	return node, nil
 }
 
-func calculateTotalDependencies(rootPath string, depsPath string, conf *Config, mode Mode, useDevelopmentDependencies bool, moveInclude bool) (*Cache, *DependencyNode, error) {
+func CalculateTotalDependencies(rootPath string, depsPath string, conf *Config, mode Mode, useDevelopmentDependencies bool) (*Cache, *DependencyNode, error) {
 	cache := NewCache()
-	rootNode, rootNodeErr := convertFromConfigNode(rootPath, depsPath, conf, cache, mode, useDevelopmentDependencies, moveInclude)
+	rootNode, rootNodeErr := convertFromConfigNode(rootPath, depsPath, conf, cache, mode, useDevelopmentDependencies)
 	return cache, rootNode, rootNodeErr
 }
 
@@ -350,11 +349,12 @@ func whoDependsOnThisExcept(dependencies []*DependencyNode, dependencyToCheck *D
 	return foundDependencies
 }
 
-func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopmentDependencies bool, localPackageRoot string, depsTargetPathOverride string, moveInclude bool) (*DependencyInfo, error) {
+func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopmentDependencies bool, localPackageRoot string, depsTargetPathOverride string) (*DependencyInfo, error) {
 	conf, confErr := ReadConfigFromFilename(filename)
 	if confErr != nil {
 		return nil, confErr
 	}
+
 	var packageRootPath string
 	if localPackageRoot == "" {
 		packageRootPath = path.Dir(filename)
@@ -368,26 +368,28 @@ func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopme
 		depsPath = depsTargetPathOverride
 	}
 
-	if mode != Clone || forceClean {
-		if err := BackupDeps(depsPath); err != nil {
-			return nil, err
+	if mode != ReadLocal {
+		if mode != Clone || forceClean {
+			if err := BackupDeps(depsPath); err != nil {
+				return nil, err
+			}
 		}
+		os.Mkdir(depsPath, 0755)
 	}
-	os.Mkdir(depsPath, 0755)
 
-	cache, rootNode, rootNodeErr := calculateTotalDependencies(rootPath, depsPath, conf, mode, useDevelopmentDependencies, moveInclude)
+	cache, rootNode, rootNodeErr := CalculateTotalDependencies(rootPath, depsPath, conf, mode, useDevelopmentDependencies)
 	if rootNodeErr != nil {
 		return nil, rootNodeErr
 	}
 	var rootNodes []*DependencyNode
-	for _, node := range cache.nodes {
+	for _, node := range cache.Nodes {
 		if node.name == rootNode.name {
 			continue
 		}
 		rootNodes = append(rootNodes, node)
 	}
 
-	for _, nodeToCheck := range cache.nodes {
+	for _, nodeToCheck := range cache.Nodes {
 		for _, localNode := range nodeToCheck.dependencies {
 			allDependencies := whoDependsOnThisExcept(nodeToCheck.dependencies, localNode)
 			if len(allDependencies) > 0 {
@@ -396,7 +398,6 @@ func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopme
 		}
 	}
 
-	//rootNode.Print(0)
 	info := &DependencyInfo{RootPath: rootPath, PackageRootPath: packageRootPath, RootNode: rootNode, RootNodes: rootNodes}
 	return info, nil
 }

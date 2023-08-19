@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,7 +70,7 @@ func ReadConfigFromFilename(filename string) (*Config, error) {
 }
 
 func ReadConfigFromDirectory(directory string) (*Config, error) {
-	fmt.Printf("reading config from '%s'\n", directory)
+	log.Printf("reading config from '%s'\n", directory)
 	info, statErr := os.Stat(directory)
 	if statErr != nil {
 		return nil, statErr
