@@ -26,27 +26,15 @@ type SharedOptions struct {
 	Artifact                   string `short:"a" optional:"" help:"override application type"`
 }
 
-// BuildCmd is the options for a build.
-type BuildCmd struct {
-	Shared SharedOptions `embed:""`
-}
-
-// RunCmd is the options for a run command.
-type RunCmd struct {
-	Shared  SharedOptions `embed:""`
-	RunArgs []string      `arg:"" help:"run arguments"`
-}
-
 // FetchCmd is the options for a fetch.
 type FetchCmd struct {
-	Shared SharedOptions `embed:""`
+	Shared   SharedOptions `embed:""`
+	ShowTree bool          `name:"tree" default:"false" help:"show the dependency tree"`
 }
 
 // Options are all the command line options.
 type Options struct {
 	Fetch FetchCmd `cmd:""`
-	Build BuildCmd `cmd:""`
-	Run   RunCmd   `cmd:""`
 }
 
 func stringToArtifactType(appType string) depslib.ArtifactType {
@@ -83,26 +71,6 @@ func sharedOptionsToGeneralOptions(shared SharedOptions) command.Options {
 	return generalOptions
 }
 
-// Run is called if a run command was issued.
-func (o *RunCmd) Run() error {
-	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".")
-	if foundErr != nil {
-		return foundErr
-	}
-
-	return command.Run(foundConfs, sharedOptionsToGeneralOptions(o.Shared), o.RunArgs)
-}
-
-// Run is called if a build command was issued.
-func (o *BuildCmd) Run() error {
-	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".")
-	if foundErr != nil {
-		return foundErr
-	}
-
-	return command.Build(foundConfs, sharedOptionsToGeneralOptions(o.Shared))
-}
-
 // Run is called if a fetch command was issued.
 func (o *FetchCmd) Run() error {
 	foundConfs, foundErr := depslib.FindClosestConfigurationFiles(".")
@@ -110,7 +78,7 @@ func (o *FetchCmd) Run() error {
 		return foundErr
 	}
 
-	return command.Fetch(foundConfs, sharedOptionsToGeneralOptions(o.Shared))
+	return command.Fetch(foundConfs, sharedOptionsToGeneralOptions(o.Shared), o.ShowTree)
 }
 
 func main() {

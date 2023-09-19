@@ -6,9 +6,7 @@
 package command
 
 import (
-	"github.com/piot/deps/src/ccompile"
 	"github.com/piot/deps/src/depslib"
-	"github.com/piot/deps/src/depsrun"
 )
 
 type Options struct {
@@ -25,27 +23,15 @@ func setupDependencies(foundConfs []string, options Options) (*depslib.Dependenc
 	return dependencyInfo, err
 }
 
-func Build(foundConfs []string, options Options) error {
-	dependencyInfo, depsErr := setupDependencies(foundConfs, options)
+func Fetch(foundConfs []string, options Options, showTree bool) error {
+	root, depsErr := setupDependencies(foundConfs, options)
 	if depsErr != nil {
 		return depsErr
 	}
-	_, buildErr := ccompile.Build(dependencyInfo, options.Artifact)
-	return buildErr
-}
 
-func Run(foundConfs []string, options Options, runArgs []string) error {
-	dependencyInfo, depsErr := setupDependencies(foundConfs, options)
-	if depsErr != nil {
-		return depsErr
+	if showTree {
+		root.RootNode.Print(0)
 	}
-	return depsrun.Run(dependencyInfo, options.Artifact, runArgs)
-}
 
-func Fetch(foundConfs []string, options Options) error {
-	_, depsErr := setupDependencies(foundConfs, options)
-	if depsErr != nil {
-		return depsErr
-	}
 	return nil
 }

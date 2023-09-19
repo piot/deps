@@ -356,12 +356,15 @@ func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopme
 	}
 
 	var packageRootPath string
+
+	var rootPath string
+
 	if localPackageRoot == "" {
 		packageRootPath = path.Dir(filename)
+		rootPath = path.Dir(path.Dir(packageRootPath))
 	} else {
-		packageRootPath = localPackageRoot
+		rootPath = localPackageRoot
 	}
-	rootPath := path.Dir(path.Dir(packageRootPath))
 
 	depsPath := filepath.Join(path.Dir(filename), "deps/")
 	if depsTargetPathOverride != "" {
@@ -399,5 +402,6 @@ func SetupDependencies(filename string, mode Mode, forceClean bool, useDevelopme
 	}
 
 	info := &DependencyInfo{RootPath: rootPath, PackageRootPath: packageRootPath, RootNode: rootNode, RootNodes: rootNodes}
+
 	return info, nil
 }
