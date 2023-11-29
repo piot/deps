@@ -29,13 +29,14 @@ const (
 
 func symlinkRepo(rootPath string, depsPath string, repoName string) error {
 	shortName := RepoNameToShortName(repoName)
-	packageDir := path.Join(rootPath, shortName+"/")
-	targetNameInDeps := path.Join(depsPath, shortName)
+	packageDir := path.Join(rootPath, shortName+"/src/")
+	targetNameInDeps := path.Join(depsPath, shortName, "src/")
 	_, statErr := os.Stat(targetNameInDeps)
 	if statErr == nil {
 		return fmt.Errorf("there is already something at target '%v', can not create link", targetNameInDeps)
 	}
-	fmt.Printf("symlink '%v' to '%v'\n", packageDir, targetNameInDeps)
+
+	log.Printf("symlink '%v' to '%v'\n", packageDir, targetNameInDeps)
 	makeErr := MakeSymlink(packageDir, targetNameInDeps)
 	if makeErr != nil {
 		return makeErr
@@ -162,6 +163,10 @@ func copyOrGetConfigDirectory(rootPath string, depsPath string, repoName string,
 		packageDirectory := path.Join(depsPath, directoryName)
 		if err := copyDependency(rootPath, depsPath, repoName, mode); err != nil {
 			return "", err
+		}
+		if mode == Symlink {
+			shortName := RepoNameToShortName(repoName)
+			packageDirectory = path.Join(rootPath, shortName+"/")
 		}
 		return packageDirectory, nil
 	}
