@@ -30,6 +30,7 @@ type Config struct {
 	DepsVersion  string
 	Version      string
 	Name         string
+	LibraryName  string
 	ArtifactType string
 	Dependencies []Package
 	Development  []Package

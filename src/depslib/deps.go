@@ -190,6 +190,7 @@ func establishPackageAndReadConfig(rootPath string, depsPath string, packageName
 
 type DependencyNode struct {
 	name            string
+	libraryName     string
 	version         semver.Version
 	artifactType    ArtifactType
 	dependencies    []*DependencyNode
@@ -198,6 +199,10 @@ type DependencyNode struct {
 }
 
 func (n *DependencyNode) Name() string {
+	return n.name
+}
+
+func (n *DependencyNode) LibraryName() string {
 	return n.name
 }
 
@@ -304,7 +309,7 @@ func ToArtifactType(v string) ArtifactType {
 
 func convertFromConfigNode(rootPath string, depsPath string, conf *Config, cache *Cache, mode Mode, useDevelopmentDependencies bool) (*DependencyNode, error) {
 	artifactType := ToArtifactType(conf.ArtifactType)
-	node := &DependencyNode{name: conf.Name, version: semver.MustParse(conf.Version), artifactType: artifactType}
+	node := &DependencyNode{name: conf.Name, libraryName: conf.LibraryName, version: semver.MustParse(conf.Version), artifactType: artifactType}
 	cache.AddNode(conf.Name, node)
 	for _, dep := range conf.Dependencies {
 		foundNode, handleErr := handleNode(rootPath, depsPath, node, cache, dep.Name, mode, useDevelopmentDependencies)
